@@ -2171,7 +2171,7 @@ In this library the device names are the same as the pin names of the symbols, t
 <part name="SUPPLY24" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY25" library="supply2" deviceset="GND" device=""/>
 <part name="C10" library="TT7" deviceset="CAP0402" device="" value="18nF"/>
-<part name="R4" library="TT7" deviceset="RES0402" device="" value="1kΩ"/>
+<part name="R4" library="TT7" deviceset="RES0402" device="" value="1k"/>
 <part name="SUPPLY26" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY27" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY28" library="supply2" deviceset="GND" device=""/>
@@ -2198,7 +2198,7 @@ In this library the device names are the same as the pin names of the symbols, t
 <part name="L3" library="TT7" deviceset="IND0402" device="" value="(optional)"/>
 <part name="C16" library="TT7" deviceset="CAP0402" device="" value="100nF"/>
 <part name="SUPPLY43" library="supply2" deviceset="GND" device=""/>
-<part name="R15" library="TT7" deviceset="RES0402-3" device="" value="0Ω"/>
+<part name="R15" library="TT7" deviceset="RES0402-3" device="" value="0R"/>
 <part name="C17" library="TT7" deviceset="CAP0402" device="" value="100nF"/>
 <part name="C18" library="TT7" deviceset="CAP0402" device="" value="100nF"/>
 <part name="C19" library="TT7" deviceset="CAP0402" device="" value="1uF"/>
@@ -2230,7 +2230,7 @@ In this library the device names are the same as the pin names of the symbols, t
 <part name="SUPPLY53" library="supply2" deviceset="GND" device=""/>
 <part name="D1" library="TT7" deviceset="ESD9R" device=""/>
 <part name="SUPPLY54" library="supply2" deviceset="GND" device=""/>
-<part name="R21" library="TT7" deviceset="RES0402" device="" value="1MΩ"/>
+<part name="R21" library="TT7" deviceset="RES0402" device="" value="1M"/>
 <part name="SUPPLY42" library="supply2" deviceset="GND" device=""/>
 <part name="U12" library="TT7" deviceset="TPS3839" device=""/>
 <part name="SUPPLY55" library="supply2" deviceset="GND" device=""/>
