@@ -1,5 +1,7 @@
 /*
-	
+	SysTick
+		24-bit system timer that counts down from the reload value to zero.
+		CLK source is either MCK or MCK/8.
 */
 
 
