@@ -41,6 +41,7 @@ void GCLK_x_enable(uint8_t gclk, uint8_t src, uint8_t div, uint8_t divsel, uint8
 void GCLK_x_disable(uint8_t gclk);
 void MCLK_set_prescaler_CPU(uint8_t cpudiv);
 void MCLK_set_prescaler_LP(uint8_t lpdiv);
+void MCLK_set_prescaler_BUP(uint8_t bupdiv);
 
 
 #endif // L21_GCLK_H_

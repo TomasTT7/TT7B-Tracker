@@ -67,7 +67,7 @@
 */
 void GCLK_x_enable(uint8_t gclk, uint8_t src, uint8_t div, uint8_t divsel, uint8_t runstdby)
 {
-	if(gclk > 8 || src > 8) break;
+	if(gclk > 8 || src > 8) return;
 	
 	GCLK->GENCTRL[gclk].reg = (div << 16) | (runstdby << 13) | (divsel << 12) | (0x01 << 9) | (0x01 << 8) | src;
 	while(GCLK->SYNCBUSY.reg & (0x01 << (gclk + 2)));
@@ -125,5 +125,15 @@ void MCLK_set_prescaler_CPU(uint8_t cpudiv)
 void MCLK_set_prescaler_LP(uint8_t lpdiv)
 {
 	MCLK->LPDIV.reg = lpdiv;
+	while(!(MCLK->INTFLAG.bit.CKRDY));
+}
+
+
+/*
+
+*/
+void MCLK_set_prescaler_BUP(uint8_t bupdiv)
+{
+	MCLK->BUPDIV.reg = bupdiv;
 	while(!(MCLK->INTFLAG.bit.CKRDY));
 }

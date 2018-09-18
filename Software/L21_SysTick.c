@@ -19,6 +19,27 @@ void SysTick_delay_init(void)
 
 
 /*
+	Intended for slow MCLK (32kHz) to maintain accuracy.
+	SysTick_CLK global variable should be updated after every MCK change.
+*/
+void SysTick_delay_s(uint32_t s)
+{
+	uint32_t n = SysTick_CLK;
+	
+	if(n > 0)
+	{
+		for(uint32_t i = 0; i < s; i++)
+		{
+			SysTick->LOAD = n;
+			SysTick->VAL = 0;
+		
+			while(!(SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk));
+		}
+	}
+}
+
+
+/*
 	SysTick_CLK global variable should be updated after every MCK change.
 */
 void SysTick_delay_ms(uint32_t ms)
