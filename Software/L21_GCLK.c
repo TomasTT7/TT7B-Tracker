@@ -26,6 +26,42 @@
 		All Peripheral Channels in GCLK are disabled.
 	On a User Reset the GCLK module starts to its initial state, except for:
 		Generic Clocks that are write-locked, i.e., the according WRTLOCK is set to 1 prior to Reset
+		
+	PCHCTRLm Mapping
+		0		GCLK_DFLL48M_REF				DFLL48M Reference
+		1		GCLK_DPLL						FDPLL96M input clock source for reference
+		2		GCLK_DPLL_32K					FDPLL96M 32kHz clock for FDPLL96M internal lock timer
+		3		GCLK_EIC						EIC
+		4		GCLK_USB						USB
+		5		GCLK_EVSYS_CHANNEL_0			EVSYS_CHANNEL_0
+		6		GCLK_EVSYS_CHANNEL_1			EVSYS_CHANNEL_1
+		7		GCLK_EVSYS_CHANNEL_2			EVSYS_CHANNEL_2
+		8		GCLK_EVSYS_CHANNEL_3			EVSYS_CHANNEL_3
+		9		GCLK_EVSYS_CHANNEL_4			EVSYS_CHANNEL_4
+		10		GCLK_EVSYS_CHANNEL_5			EVSYS_CHANNEL_5
+		11		GCLK_EVSYS_CHANNEL_6			EVSYS_CHANNEL_6
+		12		GCLK_EVSYS_CHANNEL_7			EVSYS_CHANNEL_7
+		13		GCLK_EVSYS_CHANNEL_8			EVSYS_CHANNEL_8
+		14		GCLK_EVSYS_CHANNEL_9			EVSYS_CHANNEL_9		15		GCLK_EVSYS_CHANNEL_10			EVSYS_CHANNEL_10
+		16		GCLK_EVSYS_CHANNEL_11			EVSYS_CHANNEL_11
+		17		GCLK_SERCOM[0,1,2,3,4]_SLOW		SERCOM[0,1,2,3,4]_SLOW
+		18		GCLK_SERCOM0_CORE				SERCOM0_CORE
+		19		GCLK_SERCOM1_CORE				SERCOM1_CORE
+		20		GCLK_SERCOM2_CORE				SERCOM2_CORE
+		21		GCLK_SERCOM3_CORE				SERCOM3_CORE
+		22		GCLK_SERCOM4_CORE				SERCOM4_CORE
+		23		GCLK_SERCOM5_SLOW				SERCOM5_SLOW
+		24		GCLK_SERCOM5_CORE				SERCOM5_CORE
+		25		GCLK_TCC0, GCLK_TCC1			TCC0,TCC1
+		26		GCLK_TCC2						TCC2
+		27		GCLK_TC0, GCLK_TC1				TC0,TC1
+		28		GCLK_TC2, GCLK_TC3				TC2,TC3
+		29		GCLK_TC4						TC4
+		30		GCLK_ADC						ADC
+		31		GCLK_AC							AC
+		32		GCLK_DAC						DAC
+		33		GCLK_PTC						PTC
+		34		GCLK_CCL						CCL
 */
 
 
@@ -45,7 +81,8 @@
 		Generic Clock Generator		Division Factor Bits
 		Generator 0					8 division factor bits		DIV[7:0]
 		Generator 1					16 division factor bits		DIV[15:0]
-		Generator 2-8				8 division factor bits		DIV[7:0]	
+		Generator 2-8				8 division factor bits		DIV[7:0]
+	
 	RUNSTDBY
 		0	The Generator is stopped in Standby.
 		1	The Generator is kept running and output to its dedicated GCLK_IO pin during Standby mode.
