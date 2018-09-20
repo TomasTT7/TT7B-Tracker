@@ -14,7 +14,8 @@
 
 
 /*
-	EFFECTS OF DIFFERENT RESET CAUSES											Power Supply Reset			User Reset												Backup Reset
+	EFFECTS OF DIFFERENT RESET CAUSES
+											Power Supply Reset			User Reset												Backup Reset
 											POR, BOD33		BOD12		External Reset		WDT Reset, System Reset Request		RTC, EXTWAKE, BBPS
 		RTC, OSC32KCTRL, RSTC, CTRLA.IORET	Y				N			N					N									N
 		GCLK with WRTLOCK					Y				Y			N					N									Y
@@ -39,7 +40,7 @@ uint8_t RSTC_get_reset_source(void)
 
 
 /*
-	When a Backup Reset occurs, the bit corresponding to the exit condition is set to '1', the other bits are written to '0'.	
+	When a Backup Reset occurs, the bit corresponding to the exit condition is set to '1', the other bits are written to '0'.
 	BKUPEXIT
 		Bit 2	Battery Backup Power Switch		(Set if the BBPS of SUPC changes back from battery mode to main power mode.)
 		Bit 1	Real Timer Counter Interrupt
