@@ -3,7 +3,8 @@
 	
 	To help balance between performance and power consumption, the device has two performance levels.
 	Each of the performance levels has a maximum operating frequency and a corresponding maximum
-	consumption in µA/MHz.		PL0		Performance Level 0 (PL0) provides the maximum energy efficiency configuration.		PL2		Performance Level 2 (PL2) provides the maximum operating frequency.
+	consumption in µA/MHz.		PL0		Performance Level 0 (PL0) provides the maximum energy efficiency configuration.
+		PL2		Performance Level 2 (PL2) provides the maximum operating frequency.
 	
 	In addition to the supply domains (VDDIO, VDDIN and VDDANA) the device provides these power domains:
 		PD0, PD1, PD2

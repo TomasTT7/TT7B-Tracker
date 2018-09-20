@@ -3,7 +3,8 @@
 	
 	To help balance between performance and power consumption, the device has two performance levels.
 	Each of the performance levels has a maximum operating frequency and a corresponding maximum
-	consumption in µA/MHz.		PL0		Performance Level 0 (PL0) provides the maximum energy efficiency configuration.		PL2		Performance Level 2 (PL2) provides the maximum operating frequency.
+	consumption in µA/MHz.		PL0		Performance Level 0 (PL0) provides the maximum energy efficiency configuration.
+		PL2		Performance Level 2 (PL2) provides the maximum operating frequency.
 	
 	In addition to the supply domains (VDDIO, VDDIN and VDDANA) the device provides these power domains:
 		PD0, PD1, PD2
@@ -47,7 +48,8 @@
 	The IDLE mode allows power optimization with the fastest wake-up time.
 	The STANDBY mode is the lowest power configuration while keeping the state of the logic and the content of the RAM.
 		The regulator operates in low-power mode by default and switches automatically to the normal mode in case of a sleepwalking task
-		requiring more power. It returns automatically to low power mode when the sleepwalking task is completed.	The BACKUP mode allows achieving the lowest power consumption aside from OFF. The device is entirely powered off except for the backup domain.
+		requiring more power. It returns automatically to low power mode when the sleepwalking task is completed.
+	The BACKUP mode allows achieving the lowest power consumption aside from OFF. The device is entirely powered off except for the backup domain.
 	In OFF mode, the device is entirely powered-off.
 	
 	By default, in standby sleep mode and backup sleep mode, the RAMs, NVM, and regulators
@@ -79,11 +81,13 @@
 		0x0		DEFAULT		Power domains PD0/PD1/PD2 are not linked.
 		0x1		PD01		Power domains PD0 and PD1 are linked. If PD0 is active, then PD1 is active even if there is no activity in PD1.
 		0x2		PD12		Power domains PD1 and PD2 are linked. If PD1 is active, then PD2 is active even if there is no activity in PD2.
-		0x3		PD012		All Power domains are linked. If PD0 is active, then PD1 and PD2 are active even if there is no activity in PD1 or PD2.	
+		0x3		PD012		All Power domains are linked. If PD0 is active, then PD1 and PD2 are active even if there is no activity in PD1 or PD2.
+	
 	VREGSMOD
 		0x0		AUTO		Automatic Mode
 		0x1		PERFORMANCE	Performance oriented
-		0x2		LP			Low Power consumption oriented	
+		0x2		LP			Low Power consumption oriented
+	
 	DPGPD1
 		0		Dynamic SleepWalking for power domain 1 is disabled.
 		1		Dynamic SleepWalking for power domain 1 is enabled.
@@ -148,7 +152,8 @@ void PM_sleep(void)
 		TCC: the maximum frequency is by factor 4 compared to PL2
 		SERCOM: the maximum frequency is by factor 4 compared to PL2	
 	List of peripherals/clock sources with full capabilities in PL0:
-		AC, ADC, DAC, EIC, OPAMP, OSC16M, PTC, All 32KHz clock sources and peripherals	
+		AC, ADC, DAC, EIC, OPAMP, OSC16M, PTC, All 32KHz clock sources and peripherals
+	
 	MAXIMUM CLOCK FREQUENCIES
 								PL0			PL2
 		F_GCLK					24MHz		96MHz
