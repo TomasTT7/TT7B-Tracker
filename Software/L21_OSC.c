@@ -49,7 +49,7 @@ void OSC_disable_XOSC32K(void)
 */
 void OSC_enable_OSC32K(void)
 {
-	uint32_t * pNVMcalib = (uint32_t) * 0x00806020;				// factory calibration data
+	uint32_t * pNVMcalib = (uint32_t *) 0x00806020;				// factory calibration data
 	uint32_t OSC32Kcalib = ((*pNVMcalib & 0x00001FC0) >> 6);
 	
 	OSC32KCTRL->OSC32K.bit.CALIB = OSC32Kcalib;					// OSC32K factory calibration
@@ -89,7 +89,6 @@ void OSC_enable_OSC16M(uint8_t fsel)
 	if(fsel > 3) OSCCTRL->OSC16MCTRL.bit.FSEL = 0;				// oscillator frequency selection
 	else OSCCTRL->OSC16MCTRL.bit.FSEL = fsel;
 	
-	while(OSCCTRL->STATUS.bit.OSC16MRDY);						// ensure OSC16M is fully disabled before enabling it
 	OSCCTRL->OSC16MCTRL.bit.ENABLE = 1;							// enable oscillator
 	while(!(OSCCTRL->STATUS.bit.OSC16MRDY));					// wait for OSC16M to be stable and ready
 }
@@ -111,38 +110,51 @@ void OSC_disable_OSC16M(void)
 	Fclkdfll48m = DFLLMUL.MUL * Fclkdfll48m_ref
 	
 	GCLK[1] must be set to XOSC32K and enabled first.
+	The device has to be in Performance Level 2 (PL2).
 */
-void OSC_enable_DFLL48M(void)
+void OSC_enable_DFLL48M_closed(void)
 {
 	GCLK->PCHCTRL[0].reg = (0x01 << 6) | 0x01;					// enable peripheral channel GCLK_DFLL48M_REF, source GCLK[1]
 	while (!(GCLK->PCHCTRL[0].reg & (0x01 << 6)));				// wait for synchronization
 	
-	uint32_t * pNVMcalib = (uint32_t) * 0x00806020;				// factory calibration data
+	uint32_t * pNVMcalib = (uint32_t *) 0x00806020;				// factory calibration data
 	uint32_t DFLL48Mcalib = ((*pNVMcalib & 0xFC000000) >> 26);
 	
 	while(!(OSCCTRL->STATUS.bit.DFLLRDY));						// wait for synchronization
-	OSCCTRL->DFLLVAL.bit.COARSE = DFLL48Mcalib;
+	OSCCTRL->DFLLCTRL.reg = (1 << 10) | (1 << 8);				// bypass coarse lock, chill cycle disable, disable ONDEMAND
+	
+	OSCCTRL->DFLLSYNC.bit.READREQ = 1;							// to be able to read current value of DFLLVAL in closed-loop mode
+	while(!(OSCCTRL->STATUS.bit.DFLLRDY));						// wait for synchronization
+	OSCCTRL->DFLLVAL.reg = (DFLL48Mcalib << 10) | 512;			// write coarse and fine calibration values
 	
 	while(!(OSCCTRL->STATUS.bit.DFLLRDY));						// wait for synchronization
-	OSCCTRL->DFLLMUL.bit.CSTEP = 7;
-	while(!(OSCCTRL->STATUS.bit.DFLLRDY));						// wait for synchronization
-	OSCCTRL->DFLLMUL.bit.FSTEP = 63;
-	while(!(OSCCTRL->STATUS.bit.DFLLRDY));						// wait for synchronization
-	OSCCTRL->DFLLMUL.bit.MUL = 1464;							// 47,972,352Hz = 32,768Hz * 1464 (datasheet max.: 47.981MHz)
+	OSCCTRL->DFLLMUL.reg = (0x01 << 26) | (10 << 16) | 1464;	// 47,972,352Hz = 32,768Hz * 1464 (datasheet max.: 47.981MHz)
 	
-	while(!(OSCCTRL->STATUS.bit.DFLLRDY));						// wait for synchronization
-	OSCCTRL->DFLLCTRL.bit.BPLCKC = 1;							// bypass coarse lock
-	while(!(OSCCTRL->STATUS.bit.DFLLRDY));						// wait for synchronization
-	OSCCTRL->DFLLCTRL.bit.ONDEMAND = 0;
-	while(!(OSCCTRL->STATUS.bit.DFLLRDY));						// wait for synchronization
-	OSCCTRL->DFLLCTRL.bit.RUNSTDBY = 0;
 	while(!(OSCCTRL->STATUS.bit.DFLLRDY));						// wait for synchronization
 	OSCCTRL->DFLLCTRL.bit.MODE = 1;								// enter closed-loop mode
 	
-	while(!(OSCCTRL->STATUS.bit.DFLLLCKF));						// wait for fine lock
-	
 	while(!(OSCCTRL->STATUS.bit.DFLLRDY));						// wait for synchronization
-	OSCCTRL->DFLLCTRL.bit.ENABLE = 1;							// enable FLL
+	OSCCTRL->DFLLCTRL.bit.ENABLE = 1;							// enable DFLL
+	while(!(OSCCTRL->STATUS.bit.DFLLLCKF));						// wait for fine lock
+}
+
+
+/*
+	Enable DFLL48M in closed loop mode - 48MHz output frequency.
+	Example power consumption - 286uA at 3.3V.
+	
+	The device has to be in Performance Level 2 (PL2).
+*/
+void OSC_enable_DFLL48M_open(void)
+{
+	uint32_t * pNVMcalib = (uint32_t *) 0x00806020;				// factory calibration data
+	uint32_t DFLL48Mcalib = ((*pNVMcalib & 0xFC000000) >> 26);
+	
+	while(!(OSCCTRL->STATUS.bit.DFLLRDY));
+	OSCCTRL->DFLLCTRL.reg = (0x1 << 1);							// enable DFLL
+	while(!(OSCCTRL->STATUS.bit.DFLLRDY));
+	OSCCTRL->DFLLVAL.reg = (OSCCTRL_DFLLVAL_COARSE(DFLL48Mcalib) | OSCCTRL_DFLLVAL_FINE(512));
+	while(!(OSCCTRL->STATUS.bit.DFLLRDY));
 }
 
 
@@ -152,7 +164,7 @@ void OSC_enable_DFLL48M(void)
 void OSC_disable_DFLL48M(void)
 {
 	while(!(OSCCTRL->STATUS.bit.DFLLRDY));						// wait for synchronization
-	OSCCTRL->DFLLCTRL.reg = 0;									// disable FLL
+	OSCCTRL->DFLLCTRL.reg = 0;									// disable DFLL
 }
 
 
