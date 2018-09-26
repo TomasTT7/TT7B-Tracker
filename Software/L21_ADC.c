@@ -45,7 +45,8 @@
 	Samples		SAMPLENUM	Interm. Precision	Auto Right Shfts	Div Factor		ADJRES		Total Right Shfts		Fin Precis		Auto Div Factor
 	1			0x0			12-bit				0					1				0x0									12-bit			0
 	2			0x1			13-bit				0					2				0x1			1						12-bit			0
-	4			0x2			14-bit				0					4				0x2			2						12-bit			0	8			0x3			15-bit				0					8				0x3			3						12-bit			0
+	4			0x2			14-bit				0					4				0x2			2						12-bit			0
+	8			0x3			15-bit				0					8				0x3			3						12-bit			0
 	16			0x4			16-bit				0					16				0x4			4						12-bit			0
 	32			0x5			17-bit				1					16				0x4			5						12-bit			2
 	64			0x6			18-bit				2					16				0x4			6						12-bit			4
@@ -155,7 +156,8 @@ void ADC_reset(void)
 		0x03	AIN3	ADC AIN3 pin
 		0x04	AIN4	ADC AIN4 pin
 		0x05	AIN5	ADC AIN5 pin
-		0x18	GND		Internal ground	
+		0x18	GND		Internal ground
+	
 	MUXPOS
 		0x00	AIN0			ADC AIN0 pin
 		0x01	AIN1			ADC AIN1 pin
@@ -168,14 +170,16 @@ void ADC_reset(void)
 		0x08	AIN8			ADC AIN8 pin
 		0x09	AIN9			ADC AIN9 pin
 		0x0A	AIN10			ADC AIN10 pin
-		0x0B	AIN11			ADC AIN11 pin		0x0C	AIN12			ADC AIN12 pin
+		0x0B	AIN11			ADC AIN11 pin
+		0x0C	AIN12			ADC AIN12 pin
 		0x0D	AIN13			ADC AIN13 pin
 		0x0E	AIN14			ADC AIN14 pin
 		0x0F	AIN15			ADC AIN15 pin
 		0x10	AIN16			ADC AIN16 pin
 		0x11	AIN17			ADC AIN17 pin
 		0x12	AIN18			ADC AIN18 pin
-		0x13	AIN19			ADC AIN19 pin		0x18	TEMP			Temperature Sensor
+		0x13	AIN19			ADC AIN19 pin
+		0x18	TEMP			Temperature Sensor
 		0x19	BANDGAP			Bandgap Voltage
 		0x1A	SCALEDCOREVCC	1/4 Scaled Core Supply
 		0x1B	SCALEDIOVCC		1/4 Scaled I/O Supply
