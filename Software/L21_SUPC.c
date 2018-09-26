@@ -28,5 +28,16 @@
 */
 void SUPC_temperature_sensor(uint8_t tsen)
 {
+	if(tsen)
+	{
+		SUPC->VREF.bit.SEL = 0;								// Select required voltage for internal voltage reference INTREF - 1.024V.
+		SUPC->VREF.bit.VREFOE = 1;							// Enable routing INTREF to ADC.
+	}
+	else
+	{
+		SUPC->VREF.bit.SEL = 0;								// Restore internal voltage reference INTREF to default.
+		SUPC->VREF.bit.VREFOE = 0;							// Disable routing INTREF to ADC.
+	}
+	
 	SUPC->VREF.bit.TSEN = tsen & 0x01;						// enable/disable temperature sensor
 }
