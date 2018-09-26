@@ -25,16 +25,21 @@
 	TSEN
 		0	Temperature Sensor is disabled.
 		1	Temperature Sensor is enabled and routed to an ADC input channel.
+		
+	When VREF.ONDEMAND=0, it is not recommended to enable both voltage reference output and temperature
+	sensor at the same time - only the voltage reference output will be present at both ADC inputs.
 */
 void SUPC_temperature_sensor(uint8_t tsen)
 {
 	if(tsen)
 	{
+		SUPC->VREF.bit.ONDEMAND = 1;						// Voltage reference is enabled when a peripheral is requesting it.
 		SUPC->VREF.bit.SEL = 0;								// Select required voltage for internal voltage reference INTREF - 1.024V.
 		SUPC->VREF.bit.VREFOE = 1;							// Enable routing INTREF to ADC.
 	}
 	else
 	{
+		SUPC->VREF.bit.ONDEMAND = 0;						// Voltage reference is always on, if enabled.
 		SUPC->VREF.bit.SEL = 0;								// Restore internal voltage reference INTREF to default.
 		SUPC->VREF.bit.VREFOE = 0;							// Disable routing INTREF to ADC.
 	}
