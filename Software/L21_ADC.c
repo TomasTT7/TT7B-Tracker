@@ -77,13 +77,13 @@ void ADC_enable(uint8_t prescaler, uint8_t refsel, uint8_t ressel, uint8_t sampl
 	GCLK->PCHCTRL[30].bit.CHEN = 1;								// enable clock
 	while(!(GCLK->PCHCTRL[30].bit.CHEN));						// wait for synchronization
 	
-	PORT->Group[0].PMUX[3].bit.PMUXO = 0x1;						// Peripheral function B selected
-	PORT->Group[0].PMUX[9].bit.PMUXE = 0x1;
-	PORT->Group[0].PMUX[9].bit.PMUXO = 0x1;
+	PORT->Group[0].PMUX[3].bit.PMUXO = 0x1;						// PA7 - peripheral function B selected
+	PORT->Group[0].PMUX[5].bit.PMUXE = 0x1;						// PA10
+	PORT->Group[0].PMUX[5].bit.PMUXO = 0x1;						// PA11
 	
-	PORT->Group[0].PINCFG[7].bit.PMUXEN = 1;					// Selected peripheral function controls direction and output drive value.
-	PORT->Group[0].PINCFG[18].bit.PMUXEN = 1;
-	PORT->Group[0].PINCFG[19].bit.PMUXEN = 1;
+	PORT->Group[0].PINCFG[7].bit.PMUXEN = 1;					// PA7 - selected peripheral function controls direction and output drive value.
+	PORT->Group[0].PINCFG[10].bit.PMUXEN = 1;					// PA10
+	PORT->Group[0].PINCFG[11].bit.PMUXEN = 1;					// PA11
 	
 	ADC->CTRLA.bit.ENABLE = 0;									// ADC must be disabled for configuration
 	while(ADC->SYNCBUSY.bit.ENABLE);							// SYNCBUSY.ENABLE will be cleared when operation is complete.
@@ -122,9 +122,9 @@ void ADC_disable(void)
 	GCLK->PCHCTRL[30].bit.CHEN = 0;								// disable ADC clock
 	while(GCLK->PCHCTRL[30].bit.CHEN);							// wait for synchronization
 	
-	PORT->Group[0].PINCFG[7].bit.PMUXEN = 0;					// PORT registers control the direction	and output drive value.
-	PORT->Group[0].PINCFG[18].bit.PMUXEN = 0;
-	PORT->Group[0].PINCFG[19].bit.PMUXEN = 0;
+	PORT->Group[0].PINCFG[7].bit.PMUXEN = 0;					// PA7 - PORT registers control the direction and output drive value.
+	PORT->Group[0].PINCFG[10].bit.PMUXEN = 0;					// PA10
+	PORT->Group[0].PINCFG[11].bit.PMUXEN = 0;					// PA11
 }
 
 
