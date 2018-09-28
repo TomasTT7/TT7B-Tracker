@@ -33,24 +33,24 @@ void PORT_switch_enable(uint8_t swtch)
 	switch(swtch)
 	{
 		case 1:
-			PORT->Group[0].DIRSET.reg |= PORT_PA22;				// I/O pin in the PORT group is configured as an OUTPUT.
-			PORT->Group[0].OUTSET.reg |= PORT_PA22;				// Pin output is driven HIGH, or input is connected to an internal PULL-UP.
+			PORT->Group[0].DIRSET.reg = PORT_PA22;				// I/O pin in the PORT group is configured as an OUTPUT.
+			PORT->Group[0].OUTSET.reg = PORT_PA22;				// Pin output is driven HIGH, or input is connected to an internal PULL-UP.
 			break;
 			
 		case 2:
-			PORT->Group[0].DIRSET.reg |= PORT_PA16;				// I/O pin in the PORT group is configured as an OUTPUT.
-			PORT->Group[0].OUTSET.reg |= PORT_PA16;				// Pin output is driven HIGH, or input is connected to an internal PULL-UP.
+			PORT->Group[0].DIRSET.reg = PORT_PA16;				// I/O pin in the PORT group is configured as an OUTPUT.
+			PORT->Group[0].OUTSET.reg = PORT_PA16;				// Pin output is driven HIGH, or input is connected to an internal PULL-UP.
 			break;
 			
 		case 3:
-			PORT->Group[0].DIRSET.reg |= PORT_PA04;				// I/O pin in the PORT group is configured as an OUTPUT.
-			PORT->Group[0].OUTSET.reg |= PORT_PA04;				// Pin output is driven HIGH, or input is connected to an internal PULL-UP.
+			PORT->Group[0].DIRSET.reg = PORT_PA04;				// I/O pin in the PORT group is configured as an OUTPUT.
+			PORT->Group[0].OUTSET.reg = PORT_PA04;				// Pin output is driven HIGH, or input is connected to an internal PULL-UP.
 			break;
 			
 		case 4:
 			PORT->Group[0].PINCFG[6].reg = (0x1 << 6);			// DRVSTR - Pin drive strength is set to stronger drive strength.
-			PORT->Group[0].DIRSET.reg |= PORT_PA06;				// I/O pin in the PORT group is configured as an OUTPUT.
-			PORT->Group[0].OUTSET.reg |= PORT_PA06;				// Pin output is driven HIGH, or input is connected to an internal PULL-UP.
+			PORT->Group[0].DIRSET.reg = PORT_PA06;				// I/O pin in the PORT group is configured as an OUTPUT.
+			PORT->Group[0].OUTSET.reg = PORT_PA06;				// Pin output is driven HIGH, or input is connected to an internal PULL-UP.
 			break;
 			
 		default:
@@ -71,23 +71,23 @@ void PORT_switch_disable(uint8_t swtch)
 	switch(swtch)
 	{
 		case 1:
-			PORT->Group[0].OUTCLR.reg |= PORT_PA22;				// Pin output is driven LOW, or input is connected to an internal PULL-DOWN.
-			PORT->Group[0].DIRCLR.reg |= PORT_PA22;				// I/O pin in the PORT group is configured as an INPUT.
+			PORT->Group[0].OUTCLR.reg = PORT_PA22;				// Pin output is driven LOW, or input is connected to an internal PULL-DOWN.
+			PORT->Group[0].DIRCLR.reg = PORT_PA22;				// I/O pin in the PORT group is configured as an INPUT.
 			break;
 			
 		case 2:
-			PORT->Group[0].OUTCLR.reg |= PORT_PA16;				// Pin output is driven LOW, or input is connected to an internal PULL-DOWN.
-			PORT->Group[0].DIRCLR.reg |= PORT_PA16;				// I/O pin in the PORT group is configured as an INPUT.
+			PORT->Group[0].OUTCLR.reg = PORT_PA16;				// Pin output is driven LOW, or input is connected to an internal PULL-DOWN.
+			PORT->Group[0].DIRCLR.reg = PORT_PA16;				// I/O pin in the PORT group is configured as an INPUT.
 			break;
 			
 		case 3:
-			PORT->Group[0].OUTCLR.reg |= PORT_PA04;				// Pin output is driven LOW, or input is connected to an internal PULL-DOWN.
-			PORT->Group[0].DIRCLR.reg |= PORT_PA04;				// I/O pin in the PORT group is configured as an INPUT.
+			PORT->Group[0].OUTCLR.reg = PORT_PA04;				// Pin output is driven LOW, or input is connected to an internal PULL-DOWN.
+			PORT->Group[0].DIRCLR.reg = PORT_PA04;				// I/O pin in the PORT group is configured as an INPUT.
 			break;
 			
 		case 4:
-			PORT->Group[0].OUTCLR.reg |= PORT_PA06;				// Pin output is driven LOW, or input is connected to an internal PULL-DOWN.
-			PORT->Group[0].DIRCLR.reg |= PORT_PA06;				// I/O pin in the PORT group is configured as an INPUT.
+			PORT->Group[0].OUTCLR.reg = PORT_PA06;				// Pin output is driven LOW, or input is connected to an internal PULL-DOWN.
+			PORT->Group[0].DIRCLR.reg = PORT_PA06;				// I/O pin in the PORT group is configured as an INPUT.
 			break;
 			
 		default:
