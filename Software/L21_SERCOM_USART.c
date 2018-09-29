@@ -37,7 +37,7 @@ void SERCOM_USART_enable(uint32_t mclk, uint32_t baud)
 	SERCOM3->USART.CTRLA.bit.RXPO = 0x1;						// PA23 - RX - SERCOM PAD[1] is used for data reception
 	SERCOM3->USART.CTRLA.bit.TXPO = 0x1;						// PA24 - TX - SERCOM PAD[2] is used for data transmission
 	SERCOM3->USART.CTRLB.bit.CHSIZE = 0;						// Character size 8 bits
-	SERCOM3->USART.CTRLA.bit.DORD = 0;							// MSB is transmitted first.
+	SERCOM3->USART.CTRLA.bit.DORD = 1;							// LSB is transmitted first.
 	SERCOM3->USART.CTRLB.bit.SBMODE = 0;						// One stop bit.
 	
 	uint16_t reg_val = (uint16_t)(65536.0 * (1.0 - (float)baud * 16.0 / (float)mclk));
