@@ -13,7 +13,7 @@
 		1	16-bit counter
 		2	Clock/Calendar
 	
-	PRESCALER																	60s		90s		120s
+	PRESCALER												MIN STEP	MAX VAL		60s		90s		120s
 		0x0		OFF			CLK_RTC_CNT = GCLK_RTC/1		30.51us		36.4h	
 		0x1		DIV1		CLK_RTC_CNT = GCLK_RTC/1		30.51us		36.4h	
 		0x2		DIV2		CLK_RTC_CNT = GCLK_RTC/2		61.04us		72.8h	
@@ -23,9 +23,9 @@
 		0x6		DIV32		CLK_RTC_CNT = GCLK_RTC/32		0.977ms		48.5d	
 		0x7		DIV64		CLK_RTC_CNT = GCLK_RTC/64		1.953ms		97.1d	
 		0x8		DIV128		CLK_RTC_CNT = GCLK_RTC/128		3.906ms		194d	
-		0x9		DIV256		CLK_RTC_CNT = GCLK_RTC/256		7.813ms		1.06y	7680	11520	15360
-		0xA		DIV512		CLK_RTC_CNT = GCLK_RTC/512		15.63ms		2.13y	3840	5760	7680
-		0xB		DIV1024		CLK_RTC_CNT = GCLK_RTC/1024		31.25ms		4.26y	1920	2880	3840
+		0x9		DIV256		CLK_RTC_CNT = GCLK_RTC/256		7.813ms		1.06y		7680	11520	15360
+		0xA		DIV512		CLK_RTC_CNT = GCLK_RTC/512		15.63ms		2.13y		3840	5760	7680
+		0xB		DIV1024		CLK_RTC_CNT = GCLK_RTC/1024		31.25ms		4.26y		1920	2880	3840
 		
 	Expects XOSC32K clock source already running.
 	
@@ -90,6 +90,17 @@ void RTC_mode0_update_compare(uint32_t comp)
 	
 	RTC->MODE0.COMP[0].bit.COMP = count + comp;					// update next compare match
 	while(RTC->MODE0.SYNCBUSY.bit.COMP0);						// wait while write synchronization for COMP0 register is ongoing
+}
+
+
+/*
+	Returns the current value of the RTC's COUNT register.
+*/
+uint32_t RTC_get_current_count(void)
+{
+	uint32_t count = RTC->MODE0.COUNT.reg;						// get the current RTC COUNT value
+	
+	return count;
 }
 
 
