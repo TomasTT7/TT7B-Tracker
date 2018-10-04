@@ -10,6 +10,13 @@
 
 
 /*
+	NMEA TALKER ID
+		GP		GPS, SBAS, QZSS
+		GL		GLONASS
+		GA		Galileo
+		GB		BeiDou
+		GN		Any combination of GNSS
+	
 	EXAMPLE NMEA MESSAGES
 		$GPDTM,999,,0.08,N,0.07,E,-47.7,W84*1C
 		$EIGBQ,RMC*28
@@ -37,26 +44,41 @@
 		$PUBX,03,11,23,-,,,45,010,29,-,,,46,013,07,-,,,42,015,08,U,067,31,42,025,10,U,195,33,46,026,18,U,326,08,39,026,
 		17,-,,,32,015,26,U,306,66,48,025,27,U,073,10,36,026,28,U,089,61,46,024,15,-,,,39,014*0D
 		$PUBX,04,073731.00,091202,113851.00,1196,15D,1930035,-2660.664,43,*3C
+	
+	UBX PROTOCOL
+		When messages from the class CFG are sent to the receiver, the receiver will send an "acknowledge" (ACK-ACK)
+		or a "not acknowledge" (ACK-NAK) message back. Some messages from other classes (LOG) also use the same mechanism.
+		
+		All messages that are output by the receiver in a periodic manner (i.e. messages in classes MON, NAV and RXM)
+		can also be polled. The messages can be polled by sending the message required to the receiver but without a payload.
+		The receiver then responds with the same message with the payload populated.
+		
+		gnssId	GNSS
+		0		GPS
+		1		SBAS
+		2		Galileo
+		3		BeiDou
+		4		IMES
+		5		QZSS
+		6		GLONASS
 */
 
 
 /*
-	
+	UBX-MON-VER
 */
 void ZOE_M8B_get_version(void)
 {
-	// UBX-MON-VER
 	/* VERSION								response 48 + 30 * N bytes */
 	static uint8_t request0A04[8] = {0xB5, 0x62, 0x0A, 0x04, 0x00, 0x00, 0x0E, 0x34};
 }
 
 
 /*
-	
+	UBX-NAV-PVT
 */
 void ZOE_M8B_get_solution(void)
 {
-	// UBX-NAV-PVT
 	// validDate, validTime, confirmedDate, confirmedTime flags
 	/* EVERYTHING							response 100 bytes (UBLOX 8), 92 bytes (UBLOX 7) */
 	static uint8_t request0107[8] = {0xB5, 0x62, 0x01, 0x07, 0x00, 0x00, 0x08, 0x19};
@@ -64,19 +86,75 @@ void ZOE_M8B_get_solution(void)
 
 
 /*
+	Requests an NMEA message. NMEA output must be enabled.
+	Only GPS NMEA Talker (e.g. GPGGA).
 	
+	MESSAGE
+		0	GPGGA
+		1	GPRMC
+		2	GPZDA
+		3	GNGGA
+		4	GNRMC
+		5	GNZDA
+	
+	The default 1s periodic NMEA output rate must be changed to zero.
 */
-void ZOE_M8B_get_NMEA_message(uint8_t message)
+uint8_t ZOE_M8B_get_NMEA_message(uint8_t message, uint8_t * buffer)
 {
+	SERCOM_USART_flush_rxbuffer();
+	
 	switch(message)
 	{
 		case 0:
-			
+			static uint8_t requestGPGGA[15] = "$EIGPQ,GGA*27\r\n";
+			ZOE_M8B_send_message(requestGPGGA, 15);
 			break;
 		
+		case 1:
+			static uint8_t requestGPRMC[15] = "$EIGPQ,RMC*3A\r\n";
+			ZOE_M8B_send_message(requestGPRMC, 15);
+			break;
+		
+		case 2:
+			static uint8_t requestGPZDA[15] = "$EIGPQ,ZDA*39\r\n";
+			ZOE_M8B_send_message(requestGPZDA, 15);
+			break;
+			
+		case 3:
+			static uint8_t requestGNGGA[15] = "$EIGNQ,GGA*39\r\n";
+			ZOE_M8B_send_message(requestGNGGA, 15);
+			break;
+			
+		case 4:
+			static uint8_t requestGNRMC[15] = "$EIGNQ,RMC*24\r\n";
+			ZOE_M8B_send_message(requestGNRMC, 15);
+			break;
+			
+		case 5:
+			static uint8_t requestGNZDA[15] = "$EIGNQ,ZDA*27\r\n";
+			ZOE_M8B_send_message(requestGNZDA, 15);
+			break;
+			
 		default:
 			break;
 	}
+	
+	uint8_t i = 0;
+	
+	while(1)
+	{
+		buffer[i++] = SERCOM_USART_read_byte();
+		if(buffer[i-1] == 0x0D) return i;
+	}
+}
+
+
+/*
+	UBX-CFG-NAV5
+*/
+void ZOE_M8B_get_dynamic_model(uint8_t * dynamic_model)
+{
+	
 }
 
 
@@ -89,10 +167,26 @@ void ZOE_M8B_get_NMEA_message(uint8_t message)
 	short periods (several seconds, rarely more than 60 seconds) when such calculations are running.
 	Ongoing calculations will automatically prevent the power save mode from entering the power-off state.
 	The power-down will be delayed until all calculations are done.
+	
+	UBX-NAV-AOPSTATUS
 */
 void ZOE_M8B_get_ANA_status(void)
 {
-	// UBX-NAV-AOPSTATUS
+	
+}
+
+
+/*
+	OUTPUT
+		Ground distance since last reset		distance
+		Ground distance accuracy				distanceStd
+		Total cumulative ground distance		totalDistance
+	
+	UBX-NAV-ODO
+*/
+void ZOE_M8B_get_odometer_distance(void)
+{
+	
 }
 
 
@@ -106,7 +200,6 @@ void ZOE_M8B_get_ANA_status(void)
 // Sending UBX-CFG-PMS message resets the UBX-CFG-PM2 settings. Always first send UBX-CFG-PMS message followed by UBX-CFG-PM2 if further configuration is needed.
 // For update rates from 1 Hz to 4 Hz, always use UBX-CFG-PMS message to set the update rate. If further configuration with UBX-CFG-PM2 is needed, the field updatePeriod in UBX-CFG-PM2 message must exactly match the update rate set with UBX-CFG-PMS message. For example, if 2 Hz update rate is selected with UBX-CFG-PMS, the field updatePeriod in UBX-CFG-PM2 must be 500 ms.
 // Using Multi-GNSS Assistance data on receiver start-up can improve the start-up performance. Multi-GNSS Assistance data ensures minimal power consumption, since A-GNSS enables the chip to maximize its poweroptimized period.
-// leave only GGA or RMC for start
 // Current Configuration - changed by UBX-CFG-xxx messages
 // UBX-CFG-CFG - saves the current configuration to non-volatile memory
 // UBX-CFG-GNSS - allows to specify which GNSS signals should be processed along with limits on how many tracking channels should be allocated to each GNSS
@@ -114,16 +207,6 @@ void ZOE_M8B_get_ANA_status(void)
 // valid fix - check gnssFixOK flag in the UBX-NAV-PVT
 // UBX-CFG-NAVX5 - AssistNow Autonomous enable
 // UBX-RXM-PMREQ - the receiver can be forced to enter Inactive state
-
-
-/*
-	The Current Configuration is stored in the volatile RAM of the u-blox receiver.
-	It can be made permanent by storring it in the on-chip BBR (battery backed RAM).
-*/
-void ZOE_M8B_save_current_configuration(void)
-{
-	// UBX-CFG-CFG
-}
 
 
 /*
@@ -137,19 +220,64 @@ void ZOE_M8B_save_current_configuration(void)
 	7		Airborne <2g	50000		250				100				Altitude				Large
 	8		Airborne <4g	50000		500				100				Altitude				Large
 	9		Wrist			9000		30				20				Altitude and Velocity	Medium
+	
+	UBX-CFG-NAV5
 */
-void ZOE_M8B_set_dynamic_model(uint8_t model)
+uint8_t ZOE_M8B_set_dynamic_model(uint8_t model)
 {
-	// UBX-CFG-NAV5
+	switch(model)
+	{
+		case 0:
+			static uint8_t Portable[44] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27,
+										   0x00, 0x00, 0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00,
+										   0x10, 0x27, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x47, 0x0F};
+			ZOE_M8B_send_message(Portable, 44);
+			break;
+		
+		case 2:
+			return 0;
+		
+		case 3:
+			return 0;
+		
+		case 4:
+			return 0;
+		
+		case 5:
+			return 0;
+		
+		case 6:
+			static uint8_t Airborne1g[44] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27,
+											 0x00, 0x00, 0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00,
+											 0x10, 0x27, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4D, 0xDB};
+			ZOE_M8B_send_message(Airborne1g, 44);
+			break;
+		
+		case 7:
+			return 0;
+		
+		case 8:
+			return 0;
+		
+		case 9:
+			return 0;
+		
+		default:
+			return 0;
+	}
+	
+	uint8_t acknack = ZOE_M8B_receive_acknowledge();
+	
+	return acknack;
 }
 
 
 /*
-	
+	UBX-CFG-RATE
 */
 void ZOE_M8B_set_update_rate(uint8_t rate)
 {
-	// UBX-CFG-RATE
+	
 }
 
 
@@ -163,10 +291,48 @@ void ZOE_M8B_set_update_rate(uint8_t rate)
 		5	115200		8.7ms
 		6	230400		4.3ms
 		7	460800		2.2ms
+	
+	MODE	BAUD RATE	PROTOCOL OUT	PROTOCOL IN
+	0		9600		UBX, NMEA		UBX, NMEA, RTCM
+	1		9600		UBX				UBX, NMEA, RTCM
+	2		115200		UBX, NMEA		UBX, NMEA, RTCM
+	3		115200		UBX				UBX, NMEA, RTCM
+	
+	UBX-CFG-PRT
 */
-void ZOE_M8B_set_baud_rate(uint8_t baud)
+void ZOE_M8B_set_port(uint8_t mode)
 {
-	// UBX-CFG-PRT
+	switch(mode)
+	{
+		case 0:
+			static uint8_t slowNMEA[28] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25,
+										   0x00, 0x00, 0x07, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA2, 0xB5};
+			ZOE_M8B_send_message(slowNMEA, 28);
+			break;
+		
+		case 1:
+			static uint8_t slowUBX[28] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25,
+										  0x00, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xA9};
+			ZOE_M8B_send_message(slowUBX, 28);
+			break;
+			
+		case 2:
+			static uint8_t fastNMEA[28] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x00, 0xC2,
+										   0x01, 0x00, 0x07, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x7E};
+			ZOE_M8B_send_message(fastNMEA, 28);
+			break;
+			
+		case 3:
+			static uint8_t fastUBX[28] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x00, 0xC2,
+										  0x01, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBE, 0x72};
+			ZOE_M8B_send_message(fastUBX, 28);
+			break;
+		
+		default:
+			break;
+	}
+	
+	// Don't wait for ACK/NACK. The baud rate may be different.
 }
 
 
@@ -184,42 +350,12 @@ void ZOE_M8B_set_baud_rate(uint8_t baud)
 	
 	Using UBX-CFG-PMS to set Super-E mode 1, 2, 4Hz navigation rates sets 180s minAcqTime instead
 	the default 300s in protocol version 23.01. 300s is recommended for the best performance.
+	
+	UBX-CFG-PMS
 */
 void ZOE_M8B_set_power_mode(uint8_t mode)
 {
-	// UBX-CFG-PMS
-}
-
-
-/*
-	AssistNow Autonomous is disabled by default. Once enabled, the receiver will automatically produce
-	data for newly received broadcast ephemerides and, if that data is available, automatically provide
-	the navigation subsystem with orbits when necessary and adequate.
 	
-	Default orbit data validity of approximately three days (for GPS satellites observed once)
-	and up to six days (for GPS and GLONASS satellites observed multiple times over a period of at least half a day).
-	
-	Enabling the AssistNow Autonomous feature will lead to increased power consumption while prediction is calculated.
-	Therefore for each application special care must be taken to judge whether AssistNow Autonomous is beneficial
-	to the overall power consumption or not.
-*/
-void ZOE_M8B_AssistNow_Autonomous(uint8_t enable)
-{
-	// UBX-CFG-NAVX5
-}
-
-
-/*
-	Send a dummy sequence of 0xFF to the receiver's UART interface. This will wake up the receiver if it is in Inactive state.
-	If the receiver is not in Inactive state, the sequence will be ignored.
-	
-	Send following messages about half a second after the dummy sequence. If the interval between the dummy sequence
-	and the next message is too short, the receiver may not yet be ready. 
-*/
-void ZOE_M8B_wakeup_sequence(uint32_t delay_ms)
-{
-	// send dummy byte 0xFF
-	if(delay_ms > 0) SysTick_delay_ms(delay_ms);
 }
 
 
@@ -236,8 +372,167 @@ void ZOE_M8B_wakeup_sequence(uint32_t delay_ms)
 	0x0000	Hot start
 	0x0001	Warm start
 	0xFFFF	Cold start
+	
+	MODE
+		0	Hot start (Hardware reset (Watchdog) immediately)
+		1	Warm start (Hardware reset (Watchdog) immediately)
+		2	Cold start (Hardware reset (Watchdog) immediately)
+	
+	UBX-CFG-RST
 */
-void ZOE_M8B_reset(uint8_t type, uint8_t mask)
+void ZOE_M8B_reset(uint8_t mode)
 {
-	// UBX-CFG-RST
+	switch(mode)
+	{
+		case 0:
+			static uint8_t hot[12] = {0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x64};
+			ZOE_M8B_send_message(hot, 12);
+			break;
+			
+		case 1:
+			static uint8_t warm[12] = {0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0F, 0x68};
+			ZOE_M8B_send_message(warm, 12);
+			break;
+			
+		case 2:
+			static uint8_t cold[12] = {0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0xFF, 0xB9, 0x00, 0x00, 0xC6, 0x8B};
+			ZOE_M8B_send_message(cold, 12);
+			break;
+			
+		default:
+			break;
+	}
+	
+	// Don't expect this message to be acknowledged by the receiver.
+}
+
+
+/*
+	Send a dummy sequence of 0xFF to the receiver's UART interface. This will wake up the receiver if it is in Inactive state.
+	If the receiver is not in Inactive state, the sequence will be ignored.
+	
+	Send following messages about half a second after the dummy sequence. If the interval between the dummy sequence
+	and the next message is too short, the receiver may not yet be ready. 
+*/
+void ZOE_M8B_wakeup_sequence(uint32_t delay_ms)
+{
+	static uint8_t dummy[1] = {0xFF};
+	ZOE_M8B_send_message(dummy, 1);
+	
+	if(delay_ms > 0) SysTick_delay_ms(delay_ms);
+}
+
+
+/*
+	The Current Configuration is stored in the volatile RAM of the u-blox receiver.
+	It can be made permanent by storring it in the on-chip BBR (battery backed RAM).
+	
+	UBX-CFG-CFG
+*/
+uint8_t ZOE_M8B_save_current_configuration(void)
+{
+	static uint8_t saveConfiguration[21] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00,
+											0x00, 0x00, 0x01, 0x1B, 0xA9};
+	ZOE_M8B_send_message(saveConfiguration, 21);
+	
+	uint8_t acknack = ZOE_M8B_receive_acknowledge();
+	
+	return acknack;
+}
+
+
+/*
+	AssistNow Autonomous is disabled by default. Once enabled, the receiver will automatically produce
+	data for newly received broadcast ephemerides and, if that data is available, automatically provide
+	the navigation subsystem with orbits when necessary and adequate.
+	
+	Default orbit data validity of approximately three days (for GPS satellites observed once)
+	and up to six days (for GPS and GLONASS satellites observed multiple times over a period of at least half a day).
+	
+	Enabling the AssistNow Autonomous feature will lead to increased power consumption while prediction is calculated.
+	Therefore for each application special care must be taken to judge whether AssistNow Autonomous is beneficial
+	to the overall power consumption or not.
+	
+	UBX-CFG-NAVX5
+*/
+void ZOE_M8B_AssistNow_Autonomous(uint8_t enable)
+{
+	
+}
+
+
+/*
+	OUTPUT
+		Ground distance since last reset		distance
+		Ground distance accuracy				distanceStd
+		Total cumulative ground distance		totalDistance
+		
+	In ZOE-M8B the odometer feature is enabled by default
+	
+	UBX-CFG-ODO
+*/
+void ZOE_M8B_odometer(uint8_t enable)
+{
+	
+}
+
+
+/*
+	UBX-NAV-RESETODO
+*/
+void ZOE_M8B_odometer_reset(void)
+{
+	
+}
+
+
+/*
+	Sends LENGTH bytes of MESSAGE to the GPS module.
+*/
+void ZOE_M8B_send_message(uint8_t * message, uint8_t length)
+{
+	for(uint8_t i = 0; i < length; i++)
+	{
+		SERCOM_USART_write_byte(message++);
+	}
+}
+
+
+/*
+	Waits for an Acknowledged or Not-Acknowledged message from the module.
+	
+		UBX-ACK-ACK		0xB5 0x62 0x05 0x01 0xXX 0xXX 0xXX 0xXX
+		UBX-ACK-NCK		0xB5 0x62 0x05 0x00 0xXX 0xXX 0xXX 0xXX
+	
+	Ack/Nak Messages: i.e. Acknowledge or Reject messages to CFG input messages.
+*/
+uint8_t ZOE_M8B_receive_acknowledge(void)
+{
+	uint8_t buffer[10];
+	
+	for(uint8_t i = 0; i < 10; i++)
+	{
+		buffer[i] = SERCOM_USART_read_byte();
+	}
+	
+	if(buffer[2] == 0x05 && buffer[3] == 0x01) return 1;
+	else return 0;
+}
+
+
+/*
+	Verifies the checksum of received UBX messages.
+*/
+static uint8_t ZOE_M8B_verify_checksum(uint8_t *buffer, uint8_t len)
+{
+	uint8_t CK_A_comp = 0, CK_B_comp = 0;
+	
+	for(uint8_t i = 2; i < len-2; i++)
+	{
+		CK_A_comp = CK_A_comp + buffer[i];
+		CK_B_comp = CK_A_comp + CK_B_comp;
+	}
+	
+	if(buffer[len-2] == CK_A_comp && buffer[len-1] == CK_B_comp) return 1;
+	else return 0;
 }
