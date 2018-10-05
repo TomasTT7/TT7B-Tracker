@@ -70,18 +70,23 @@ void ZOE_M8B_get_dynamic_model(void);
 void ZOE_M8B_get_ANA_status(void);
 void ZOE_M8B_get_odometer_distance(void);
 
+uint8_t ZOE_M8B_set_GNSS_system(uint8_t mode);
 uint8_t ZOE_M8B_set_dynamic_model(uint8_t model);
-void ZOE_M8B_set_update_rate(uint8_t rate);
+uint8_t ZOE_M8B_set_update_rate(uint8_t rate);
 void ZOE_M8B_set_port(uint8_t mode);
-void ZOE_M8B_set_power_mode(uint8_t mode);
+uint8_t ZOE_M8B_set_message_rate(uint8_t message);
+uint8_t ZOE_M8B_set_power_mode(uint8_t mode);
+uint8_t ZOE_M8B_set_power_management(uint8_t mode);
 
+uint8_t ZOE_M8B_power_saving(uint8_t enable);
+void ZOE_M8B_backup_mode(void);
 void ZOE_M8B_reset(uint8_t mode);
 void ZOE_M8B_wakeup_sequence(uint32_t delay_ms);
 uint8_t ZOE_M8B_save_current_configuration(void);
 
-void ZOE_M8B_AssistNow_Autonomous(uint8_t enable);
-void ZOE_M8B_odometer(uint8_t enable);
-void ZOE_M8B_odometer_reset(void);
+uint8_t ZOE_M8B_AssistNow_Autonomous(uint8_t enable);
+uint8_t ZOE_M8B_odometer(uint8_t enable);
+uint8_t ZOE_M8B_odometer_reset(void);
 
 void ZOE_M8B_send_message(uint8_t * message, uint8_t length);
 uint8_t ZOE_M8B_receive_acknowledge(void);
