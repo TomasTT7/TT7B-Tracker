@@ -1012,7 +1012,8 @@ uint8_t ZOE_M8B_verify_checksum(uint8_t *buffer, uint8_t len)
 	DAY			Day of month, range 1..31 (UTC)
 	HOUR		Hour of day, range 0..23 (UTC)
 	MIN			Minute of hour, range 0..59 (UTC)
-	SEC			Seconds of minute, range 0..60 (UTC)	VALID		Bit[0] validDate		1 = valid UTC Day
+	SEC			Seconds of minute, range 0..60 (UTC)
+	VALID		Bit[0] validDate		1 = valid UTC Day
 				Bit[1] validTime		1 = valid UTC Time of Day
 				Bit[2] fullyResolved	1 = UTC Time of Day has been fully resolved (no seconds uncertainty)
 				Bit[3] validMag			1 = valid Magnetic declination
