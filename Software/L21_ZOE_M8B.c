@@ -132,6 +132,8 @@
 
 
 /*
+	Output:
+		Zero-terminated Software Version String		buffer[6:35]		Zero-terminated Hardware Version String		buffer[36:45]	
 	UBX-MON-VER (48 + 30 * N bytes)
 */
 uint8_t ZOE_M8B_get_version(uint8_t * buffer)
@@ -997,4 +999,123 @@ uint8_t ZOE_M8B_verify_checksum(uint8_t *buffer, uint8_t len)
 	
 	if(buffer[len-2] == CK_A_comp && buffer[len-1] == CK_B_comp) return 1;
 	else return 0;
+}
+
+
+/*
+	UBX-NAV-PVT in BUFFER.
+	
+	YEAR		Year (UTC)
+	MONTH		Month, range 1..12 (UTC)
+	DAY			Day of month, range 1..31 (UTC)
+	HOUR		Hour of day, range 0..23 (UTC)
+	MIN			Minute of hour, range 0..59 (UTC)
+	SEC			Seconds of minute, range 0..60 (UTC)	VALID		Bit[0] validDate		1 = valid UTC Date				Bit[1] validTime		1 = valid UTC Time of Day				Bit[2] fullyResolved	1 = UTC Time of Day has been fully resolved (no seconds uncertainty)				Bit[3] validMag			1 = valid Magnetic declination	FIXTYPE		0: no fix
+				1: dead reckoning only
+				2: 2D-fix
+				3: 3D-fix
+				4: GNSS + dead reckoning combined
+				5: time only fix	GNSSFIXOK	1 = valid fix (i.e within DOP & accuracy masks)	PSMSTATE	0: PSM is not active
+				1: Enabled (an intermediate state before Acquisition state
+				2: Acquisition
+				3: Tracking
+				4: Power Optimized Tracking
+				5: Inactive
+	NUMSV		Number of satellites used in Navigation Solution
+	LON			Longitude
+	LAT			Latitude
+	HMSL		Height above mean sea level
+*/
+void ZOE_M8B_parse_solution(uint8_t * buffer, uint16_t * year, uint8_t * month, uint8_t * day, uint8_t * hour,
+							uint8_t * min, uint8_t * sec, uint8_t * valid, uint8_t * fixType, uint8_t * gnssFixOK,
+							uint8_t * psmState, uint8_t * numSV, float * lon, float * lat, int32_t * hMLS)
+{
+	*year = ((uint16_t)buffer[11] << 8) | (uint16_t)buffer[10];
+	*month = buffer[12];
+	*day = buffer[13];
+	*hour = buffer[14];
+	*min = buffer[15];
+	*sec = buffer[16];
+	*valid = buffer[17];
+	*fixType = buffer[26];
+	*gnssFixOK = buffer[27] & 0x01;
+	*psmState = (buffer[27] >> 2) & 0x07;
+	*numSV = buffer[29];
+	int32_t _lon = ((int32_t)buffer[33] << 24) | ((int32_t)buffer[32] << 16) | ((int32_t)buffer[31] << 8) | (int32_t)buffer[30];
+	*lon = (float)_lon / 10000000.0;
+	int32_t _lat = ((int32_t)buffer[37] << 24) | ((int32_t)buffer[36] << 16) | ((int32_t)buffer[35] << 8) | (int32_t)buffer[34];
+	*lat = (float)_lat / 10000000.0;
+	*hMLS = (((int32_t)buffer[45] << 24) | ((int32_t)buffer[44] << 16) | ((int32_t)buffer[43] << 8) | (int32_t)buffer[42]) / 1000;
+}
+
+
+/*
+	UBX-CFG-NAV5 in BUFFER. MODEL points to target variable.
+	
+	MODEL
+		0	portable
+		2	stationary
+		3	pedestrian
+		4	automotive
+		5	sea
+		6	airborne with <1g acceleration
+		7	airborne with <2g acceleration
+		8	airborne with <4g acceleration
+		9	wrist worn watch
+*/
+void ZOE_M8B_parse_dynamic_model(uint8_t * buffer, uint8_t * model)
+{
+	*model = buffer[8];
+}
+
+
+/*
+	UBX-NAV-AOPSTATUS in BUFFER. STATUS points to target variable.
+	
+	STATUS
+		0		AssistNow Autonomous subsystem is idle
+		not 0	AssistNow Autonomous subsystem is running
+*/
+void ZOE_M8B_parse_ANA_status(uint8_t * buffer, uint8_t * status)
+{
+	*status = buffer[11];
+}
+
+
+/*
+	UBX-NAV-ODO in BUFFER. DISTANCE and TOTALDISTANCE point to target variables.
+	
+	DISTANCE		[m] ground distance since last reset
+	TOTALDISTANCE	[m] total cumulative ground distance
+*/
+void ZOE_M8B_parse_odometer_distance(uint8_t * buffer, uint32_t * distance, uint32_t * totalDistance)
+{
+	*distance = ((uint32_t)buffer[17] << 24) | ((uint32_t)buffer[16] << 16) | ((uint32_t)buffer[15] << 8) | (uint32_t)buffer[14];
+	*totalDistance = ((uint32_t)buffer[21] << 24) | ((uint32_t)buffer[20] << 16) | ((uint32_t)buffer[19] << 8) | (uint32_t)buffer[18];
+}
+
+
+/*
+	UBX-NAV-DOP in BUFFER.
+	
+	Geometric DOP
+	Position DOP
+	Time DOP
+	Vertical DOP
+	Horizontal DOP
+	Northing DOP
+	Easting DOP
+	
+	All DOP values are scaled by a factor of 100.
+*/
+void ZOE_M8B_parse_dilution_of_precision(uint8_t * buffer, uint16_t * gDOP, uint16_t * pDOP, uint16_t * tDOP,
+										 uint16_t * vDOP, uint16_t * hDOP, uint16_t * nDOP, uint16_t * eDOP)
+{
+	*gDOP = ((uint16_t)buffer[11] << 8) | (uint16_t)buffer[10];
+	*pDOP = ((uint16_t)buffer[13] << 8) | (uint16_t)buffer[12];
+	*tDOP = ((uint16_t)buffer[15] << 8) | (uint16_t)buffer[14];
+	*vDOP = ((uint16_t)buffer[17] << 8) | (uint16_t)buffer[16];
+	*hDOP = ((uint16_t)buffer[19] << 8) | (uint16_t)buffer[18];
+	*nDOP = ((uint16_t)buffer[21] << 8) | (uint16_t)buffer[20];
+	*eDOP = ((uint16_t)buffer[23] << 8) | (uint16_t)buffer[22];
 }

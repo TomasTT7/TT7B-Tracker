@@ -106,5 +106,14 @@ void ZOE_M8B_send_message(uint8_t * message, uint8_t length);
 uint8_t ZOE_M8B_receive_acknowledge(void);
 uint8_t ZOE_M8B_verify_checksum(uint8_t *buffer, uint8_t len);
 
+void ZOE_M8B_parse_solution(uint8_t * buffer, uint16_t * year, uint8_t * month, uint8_t * day, uint8_t * hour,
+							uint8_t * min, uint8_t * sec, uint8_t * valid, uint8_t * fixType, uint8_t * gnssFixOK,
+							uint8_t * psmState, uint8_t * numSV, float * lon, float * lat, int32_t * hMLS);
+void ZOE_M8B_parse_dynamic_model(uint8_t * buffer, uint8_t * model);
+void ZOE_M8B_parse_ANA_status(uint8_t * buffer, uint8_t * status);
+void ZOE_M8B_parse_odometer_distance(uint8_t * buffer, uint32_t * distance, uint32_t * totalDistance);
+void ZOE_M8B_parse_dilution_of_precision(uint8_t * buffer, uint16_t * gDOP, uint16_t * pDOP, uint16_t * tDOP,
+										 uint16_t * vDOP, uint16_t * hDOP, uint16_t * nDOP, uint16_t * eDOP);
+
 
 #endif // L21_ZOE_M8B_H_
