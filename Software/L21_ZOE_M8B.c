@@ -133,7 +133,8 @@
 
 /*
 	Output:
-		Zero-terminated Software Version String		buffer[6:35]		Zero-terminated Hardware Version String		buffer[36:45]
+		Zero-terminated Software Version String		buffer[6:35]
+		Zero-terminated Hardware Version String		buffer[36:45]
 	
 	UBX-MON-VER (48 + 30 * N bytes)
 */
@@ -1011,13 +1012,17 @@ uint8_t ZOE_M8B_verify_checksum(uint8_t *buffer, uint8_t len)
 	DAY			Day of month, range 1..31 (UTC)
 	HOUR		Hour of day, range 0..23 (UTC)
 	MIN			Minute of hour, range 0..59 (UTC)
-	SEC			Seconds of minute, range 0..60 (UTC)	VALID		Bit[0] validDate		1 = valid UTC Date				Bit[1] validTime		1 = valid UTC Time of Day				Bit[2] fullyResolved	1 = UTC Time of Day has been fully resolved (no seconds uncertainty)				Bit[3] validMag			1 = valid Magnetic declination
+	SEC			Seconds of minute, range 0..60 (UTC)	VALID		Bit[0] validDate		1 = valid UTC Day
+				Bit[1] validTime		1 = valid UTC Time of Day
+				Bit[2] fullyResolved	1 = UTC Time of Day has been fully resolved (no seconds uncertainty)
+				Bit[3] validMag			1 = valid Magnetic declination
 	FIXTYPE		0: no fix
 				1: dead reckoning only
 				2: 2D-fix
 				3: 3D-fix
 				4: GNSS + dead reckoning combined
-				5: time only fix	GNSSFIXOK	1 = valid fix (i.e within DOP & accuracy masks)
+				5: time only fix
+	GNSSFIXOK	1 = valid fix (i.e within DOP & accuracy masks)
 	PSMSTATE	0: PSM is not active
 				1: Enabled (an intermediate state before Acquisition state
 				2: Acquisition
