@@ -18,6 +18,10 @@
 #include "L21_SysTick.h"
 
 
+static uint16_t C1[8];											// array for MS5607_1 coefficients
+static uint16_t C2[8];											// array for MS5607_2 coefficients
+
+
 /*
 	COMMANDS
 		Bit number				0		1		2		3		4		5		6		7

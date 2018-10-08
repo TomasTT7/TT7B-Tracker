@@ -19,10 +19,6 @@
 #include "stdint.h"
 
 
-static uint16_t C1[8];											// array for MS5607_1 coefficients
-static uint16_t C2[8];											// array for MS5607_2 coefficients
-
-
 // Functions
 void MS5607_cmd_Reset(uint8_t sensor, uint8_t delay_ms);
 void MS5607_cmd_Convert(uint8_t sensor, uint8_t mode);

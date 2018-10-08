@@ -20,6 +20,7 @@ void SERCOM_USART_disable(void);
 void SERCOM_USART_reset(void);
 void SERCOM_USART_write_byte(uint8_t data);
 uint8_t SERCOM_USART_read_byte(void);
+void SERCOM_USART_flush_rxbuffer(void);
 
 
 #endif // L21_SERCOM_USART_H_

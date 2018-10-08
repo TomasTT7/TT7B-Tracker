@@ -852,14 +852,14 @@ void ZOE_M8B_wakeup_sequence(uint32_t delay_ms)
 
 /*
 	The Current Configuration is stored in the volatile RAM of the u-blox receiver.
-	It can be made permanent by storring it in the on-chip BBR (battery backed RAM).
+	It can be made permanent by storing it in the on-chip BBR (battery backed RAM).
 	
 	UBX-CFG-CFG
 */
 uint8_t ZOE_M8B_save_current_configuration(void)
 {
-	static uint8_t saveConfiguration[21] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00,
-											0x00, 0x00, 0x01, 0x1B, 0xA9};
+	static uint8_t saveConfiguration[21] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x1F, 0x00, 0x00, 0x00, 0x00,
+											0x00, 0x00, 0x01, 0x5B, 0xC9};
 	ZOE_M8B_send_message(saveConfiguration, 21);
 	
 	uint8_t acknack = ZOE_M8B_receive_acknowledge();
@@ -1037,7 +1037,7 @@ uint8_t ZOE_M8B_verify_checksum(uint8_t *buffer, uint8_t len)
 */
 void ZOE_M8B_parse_solution(uint8_t * buffer, uint16_t * year, uint8_t * month, uint8_t * day, uint8_t * hour,
 							uint8_t * min, uint8_t * sec, uint8_t * valid, uint8_t * fixType, uint8_t * gnssFixOK,
-							uint8_t * psmState, uint8_t * numSV, float * lon, float * lat, int32_t * hMLS)
+							uint8_t * psmState, uint8_t * numSV, float * lon, float * lat, int32_t * hMSL)
 {
 	*year = ((uint16_t)buffer[11] << 8) | (uint16_t)buffer[10];
 	*month = buffer[12];
@@ -1054,7 +1054,7 @@ void ZOE_M8B_parse_solution(uint8_t * buffer, uint16_t * year, uint8_t * month, 
 	*lon = (float)_lon / 10000000.0;
 	int32_t _lat = ((int32_t)buffer[37] << 24) | ((int32_t)buffer[36] << 16) | ((int32_t)buffer[35] << 8) | (int32_t)buffer[34];
 	*lat = (float)_lat / 10000000.0;
-	*hMLS = (((int32_t)buffer[45] << 24) | ((int32_t)buffer[44] << 16) | ((int32_t)buffer[43] << 8) | (int32_t)buffer[42]) / 1000;
+	*hMSL = (((int32_t)buffer[45] << 24) | ((int32_t)buffer[44] << 16) | ((int32_t)buffer[43] << 8) | (int32_t)buffer[42]) / 1000;
 }
 
 
