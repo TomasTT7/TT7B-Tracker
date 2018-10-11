@@ -86,57 +86,99 @@ uint8_t SERCOM_I2C_transmit_address(uint8_t address)
 		while(SERCOM0->I2CM.SYNCBUSY.bit.SYSOP);				// Writing CTRLB.CMD, STATUS.BUSSTATE, ADDR, or DATA when SERCOM enabled requires sync.
 	}
 	
+	while(SERCOM0->I2CM.SYNCBUSY.reg & 0x07);					// wait for all synchronization to end
+	
+	SERCOM0->I2CM.CTRLB.bit.ACKACT = 0;							// Send ACK after a data byte is received from I2C slave.
 	SERCOM0->I2CM.ADDR.bit.ADDR = address;						// The I2C master will issue a start condition followed by address written in ADDR.
 	
-	while(!(SERCOM0->I2CM.INTFLAG.bit.MB) && !(SERCOM0->I2CM.INTFLAG.bit.SB));
+	while(!(SERCOM0->I2CM.INTFLAG.bit.MB) && !(SERCOM0->I2CM.INTFLAG.bit.SB));	// wait for bus response
 	
-	if(SERCOM0->I2CM.STATUS.bit.RXNACK) return 0;				// This bit indicates whether the last address or data packet sent was acknowledged or not.
-	else return 1;
-}
-
-
-/*
-	
-*/
-uint8_t SERCOM_I2C_transmit_byte(uint8_t data, uint8_t stop, uint8_t repeat)
-{
-	SERCOM0->I2CM.DATA.reg = data;								// provides access to master transmit and receive data buffers
-	
-	while(!(SERCOM0->I2CM.INTFLAG.bit.MB));						// This flag is set when a byte is transmitted in master write mode.
-	
-	if(stop)
+	if(SERCOM0->I2CM.STATUS.bit.RXNACK)							// This bit indicates whether the last address or data packet sent was acknowledged or not.
 	{
 		SERCOM0->I2CM.CTRLB.bit.CMD = 0x3;						// Execute acknowledge action succeeded by issuing a stop condition.
-		while(SERCOM0->I2CM.SYNCBUSY.bit.SYSOP);				// Issuing command will set System Operation bit in Synchronization Busy register.
+		return 0;
 	}
-	
-	if(repeat)
+	else
 	{
-		SERCOM0->I2CM.CTRLB.bit.CMD = 0x1;						// Execute acknowledge action succeeded by repeated Start
-		while(SERCOM0->I2CM.SYNCBUSY.bit.SYSOP);				// Issuing command will set System Operation bit in Synchronization Busy register.
+		return 1;
 	}
-	
-	if(SERCOM0->I2CM.STATUS.bit.RXNACK) return 0;				// This bit indicates whether the last address or data packet sent was acknowledged or not.
-	else return 1;
 }
 
 
 /*
 	
 */
-uint8_t SERCOM_I2C_receive_byte(uint8_t stop)
+uint8_t SERCOM_I2C_transmit_byte(uint8_t data)
+{
+	if(SERCOM0->I2CM.STATUS.bit.BUSSTATE == 0x02)				// The I2C master is the current owner of the bus.
+	{
+		while(SERCOM0->I2CM.SYNCBUSY.reg & 0x07);				// wait for all synchronization to end
+		
+		SERCOM0->I2CM.DATA.reg = data;							// provides access to master transmit and receive data buffers
+		
+		while(!(SERCOM0->I2CM.INTFLAG.bit.MB) && !(SERCOM0->I2CM.INTFLAG.bit.SB));	// wait for bus response
+		
+		if(SERCOM0->I2CM.STATUS.bit.RXNACK) return 0;			// This bit indicates whether the last address or data packet sent was acknowledged or not.
+		else return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+
+/*
+	
+*/
+uint8_t SERCOM_I2C_receive_byte(uint8_t last)
 {
 	uint8_t data = 0;
 	
-	while(!(SERCOM0->I2CM.INTFLAG.bit.SB));						// Slave on Bus flag is set when a byte is successfully received in master read mode.
-	
-	if(stop)
+	if(SERCOM0->I2CM.STATUS.bit.BUSSTATE == 0x02)				// The I2C master is the current owner of the bus.
 	{
-		SERCOM0->I2CM.CTRLB.bit.CMD = 0x3;						// Execute acknowledge action succeeded by issuing a stop condition.
-		while(SERCOM0->I2CM.SYNCBUSY.bit.SYSOP);				// Issuing command will set System Operation bit in Synchronization Busy register.
+		if(last)
+		{
+			SERCOM0->I2CM.CTRLB.bit.ACKACT = 1;					// Acknowledge Action: Send NACK.
+		}
+		else
+		{
+			while(SERCOM0->I2CM.SYNCBUSY.reg & 0x07);			// wait for all synchronization to end
+			data = SERCOM0->I2CM.DATA.reg;						// provides access to master transmit and receive data buffers
+			while(!(SERCOM0->I2CM.INTFLAG.bit.MB) && !(SERCOM0->I2CM.INTFLAG.bit.SB));	// wait for bus response
+		}
+	}
+	else
+	{
+		return 0;
 	}
 	
-	data = SERCOM0->I2CM.DATA.reg;								// provides access to master transmit and receive data buffers
+	return data;
+}
+
+
+/*
+	
+*/
+void SERCOM_I2C_end_transmission(void)
+{
+	while(SERCOM0->I2CM.SYNCBUSY.reg & 0x07);					// wait for all synchronization to end
+	SERCOM0->I2CM.CTRLB.bit.CMD = 0x3;							// Execute acknowledge action succeeded by issuing a stop condition.
+}
+
+
+/*
+	
+*/
+uint8_t SERCOM_I2C_end_reception(void)
+{
+	uint8_t data = 0;
+	
+	while(SERCOM0->I2CM.SYNCBUSY.reg & 0x07);					// wait for all synchronization to end
+	SERCOM0->I2CM.CTRLB.bit.CMD = 0x3;							// Execute acknowledge action succeeded by issuing a stop condition.
+	
+	while(SERCOM0->I2CM.SYNCBUSY.reg & 0x07);					// wait for all synchronization to end
+	data = SERCOM0->I2CM.DATA.reg;								// read last byte
 	
 	return data;
 }

@@ -76,9 +76,10 @@ void VEML6030_write_reg(uint8_t cmd, uint16_t data)
 	
 	if(ack)
 	{
-		SERCOM_I2C_transmit_byte(cmd, 0, 0);					// send command
-		SERCOM_I2C_transmit_byte(data & 0xFF, 0, 0);			// send data low byte
-		SERCOM_I2C_transmit_byte(data >> 8, 1, 0);				// send data high byte
+		SERCOM_I2C_transmit_byte(cmd);							// send command
+		SERCOM_I2C_transmit_byte(data & 0xFF);					// send data low byte
+		SERCOM_I2C_transmit_byte(data >> 8);					// send data high byte
+		SERCOM_I2C_end_transmission();
 	}
 }
 
@@ -95,14 +96,15 @@ uint16_t VEML6030_read_reg(uint8_t cmd)
 	
 	if(ack)
 	{
-		SERCOM_I2C_transmit_byte(cmd, 0, 0);					// send command
+		SERCOM_I2C_transmit_byte(cmd);							// send command
 		
 		ack = SERCOM_I2C_transmit_address((VEML_ADDRESS << 1) | 0x01);	// send receive address (repeated start)
 		
 		if(ack)
 		{
 			data = SERCOM_I2C_receive_byte(0);					// receive data low byte
-			data = ((uint16_t)SERCOM_I2C_receive_byte(1) << 8);	// receive data high byte
+			SERCOM_I2C_receive_byte(1);
+			data = (uint16_t)SERCOM_I2C_end_reception() << 8;	// receive data high byte
 		}
 	}
 	

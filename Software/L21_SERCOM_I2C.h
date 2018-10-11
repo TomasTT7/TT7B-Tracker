@@ -19,8 +19,10 @@ void SERCOM_I2C_enable(uint32_t mclk, uint32_t fscl);
 void SERCOM_I2C_disable(void);
 void SERCOM_I2C_reset(void);
 uint8_t SERCOM_I2C_transmit_address(uint8_t address);
-uint8_t SERCOM_I2C_transmit_byte(uint8_t data, uint8_t stop, uint8_t repeat);
-uint8_t SERCOM_I2C_receive_byte(uint8_t stop);
+uint8_t SERCOM_I2C_transmit_byte(uint8_t data);
+uint8_t SERCOM_I2C_receive_byte(uint8_t last);
+void SERCOM_I2C_end_transmission(void);
+uint8_t SERCOM_I2C_end_reception(void);
 
 
 #endif // L21_SERCOM_I2C_H_
