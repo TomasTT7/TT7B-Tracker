@@ -248,7 +248,7 @@ uint32_t ADC_battery_voltage(uint16_t adc_result, uint8_t bit)
 			return 0xFFFF;
 	}
 	
-	result = (uint32_t)adc_result * VDDANA / divider * 2;
+	result = (uint32_t)adc_result * VDDANA_ADC / divider * 2;
 	
 	return result;
 }
@@ -270,7 +270,7 @@ uint32_t ADC_battery_voltage(uint16_t adc_result, uint8_t bit)
 */
 float ADC_temperature_thermistor(uint16_t adc_result)
 {
-	float V_in = (float)VDDANA / 1000.0;
+	float V_in = (float)VDDANA_ADC / 1000.0;
 	float a = 0.00128424;
 	float b = 0.00023629;
 	float c = 0.0000000928;

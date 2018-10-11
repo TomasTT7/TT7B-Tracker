@@ -13,7 +13,7 @@
 #include "stdint.h"
 
 
-#define VDDANA 1826												// [mV] ADC's VDDANA reference voltage
+#define VDDANA_ADC 1826											// [mV] ADC's VDDANA reference voltage
 
 
 // Functions
