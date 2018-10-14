@@ -3,6 +3,11 @@
 	The ADC can be configured for 8-, 10- or 12-bit results. Averaging and oversampling with decimation to support up to 16-bit result.
 	
 	An integrated temperature sensor is available for use with the ADC.
+	
+	TT7B TRACKER
+		ADC[7]		PA07		Peripheral function B
+		ADC[18]		PA10		Peripheral function B
+		ADC[19]		PA11		Peripheral function B
 */
 
 
