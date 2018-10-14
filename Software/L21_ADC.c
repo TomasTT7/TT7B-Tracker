@@ -112,7 +112,7 @@ void ADC_enable(uint8_t prescaler, uint8_t refsel, uint8_t ressel, uint8_t sampl
 
 
 /*
-	Disable ADC peripheral, its clock, and restore original pin configuration. 
+	Disable ADC peripheral, its clock, and restore original pin configuration.
 */
 void ADC_disable(void)
 {

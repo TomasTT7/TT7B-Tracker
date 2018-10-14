@@ -27,9 +27,9 @@
 void SI5351B_write_reg(uint8_t reg, uint8_t data);
 uint8_t SI5351B_read_reg(uint8_t reg);
 
-void SI5351B_init(uint8_t APR);
+void SI5351B_init(void);
 void SI5351B_deinit(void);
-void SI5351B_frequency(uint32_t freq_Hz);
+void SI5351B_frequency(uint32_t freq_Hz, uint8_t APR);
 void SI5351B_enable_output(void);
 void SI5351B_disable_output(void);
 void SI5351B_drive_strength(uint8_t drvStr);

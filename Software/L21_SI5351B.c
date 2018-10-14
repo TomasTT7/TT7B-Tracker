@@ -92,27 +92,13 @@ uint8_t SI5351B_read_reg(uint8_t reg)
 /*
 	PLLB must be used as the source for any VCXO output clock. Feedback B Multisynth divider
 	ratio must be set such that the denominator (c) in the fractional divider a+b/c is fixed to 10^6.
-	
-	VCXO_Param[21:0] = 1.03 * (128 * a + b / 10^6) * APR
-	
-	For a desired pull-range of +/– 30ppm, the value APR in the equation below is 30,
-	for +/– 60ppm APR¨is 60, and so on.
-	
-	VCXO
-		VCXO Control Voltage Range			0V			3.3V
-		VCXO Gain (configurable)			18ppm/V		150ppm/V
-		VCXO Control Voltage Linearity		-5%			+5%
-		VCXO Pull Range (configurable)		+-30ppm		+-240ppm
-		VCXO Modulation Bandwidth			10kHz
-		
-	APR
-		30 to 240 ppm
 */
-void SI5351B_init(uint8_t APR)
+void SI5351B_init(void)
 {
 	while((SI5351B_read_reg(0) >> 7) == 1);						// wait while device is in system initialization mode
 	
 	SI5351B_write_reg(3, 0b11111111);							// disable CLKx output where x = 0, 1, 2, 3, 4, 5, 6, 7
+	SI5351B_write_reg(183, 0b00010010);							// Crystal Load Capacitance 0pF
 	SI5351B_write_reg(9, 0b11111111);							// OEB pin does not control enable/disable state of CLKx output.
 	SI5351B_write_reg(24, 0b10101010);							// CLK0-3 is set to a HIGH IMPEDANCE state when disabled.
 	SI5351B_write_reg(25, 0b10101010);							// CLK4-7 is set to a HIGH IMPEDANCE state when disabled.
@@ -126,14 +112,6 @@ void SI5351B_init(uint8_t APR)
 	SI5351B_write_reg(21, 0b01101111);							// CLK5 is powered up, PLLB, Drive Strength: 8mA, integer mode
 	SI5351B_write_reg(22, 0b10001100);							// CLK6 is powered down, PLLA, Drive Strength: 2mA
 	SI5351B_write_reg(23, 0b10001100);							// CLK7 is powered down, PLLA, Drive Strength: 2mA
-	
-	uint32_t VCXO_Param = (uint32_t)(1.03 * (128.0 * 6.0) * (float)APR);
-	
-	SI5351B_write_reg(162, VCXO_Param & 0xFF);					// VCXO_Param[7:0]
-	SI5351B_write_reg(163, (VCXO_Param >> 8) & 0xFF);			// VCXO_Param[15:8]
-	SI5351B_write_reg(164, (VCXO_Param >> 16) & 0x3F);			// VCXO_Param[21:16]
-	
-	SI5351B_write_reg(183, 0b00010010);							// Crystal Load Capacitance 0pF (?)
 	
 	SI5351B_write_reg(177, 0b10100000);							// PLLB and PLLA reset
 }
@@ -183,8 +161,24 @@ void SI5351B_deinit(void)
 		
 		If a+b/c is an even integer, integer mode may be enabled for PLLA or PLLB by setting
 		parameter FBA_INT or FBB_INT respectively.
+		
+	VCXO
+		For a desired pull-range of +/– 30ppm, the value APR in the equation below is 30,
+		for +/– 60ppm APR¨is 60, and so on.
+		
+		VCXO_Param[21:0] = 1.03 * (128 * a + b / 10^6) * APR
+		
+		VCXO
+			VCXO Control Voltage Range			0V			3.3V
+			VCXO Gain (configurable)			18ppm/V		150ppm/V
+			VCXO Control Voltage Linearity		-5%			+5%
+			VCXO Pull Range (configurable)		+-30ppm		+-240ppm
+			VCXO Modulation Bandwidth			10kHz
+		
+		APR
+			30 to 240 ppm
 */
-void SI5351B_frequency(uint32_t freq_Hz)
+void SI5351B_frequency(uint32_t freq_Hz, uint8_t APR)
 {
 	/* PLLB VCO FREQUENCY */
 	uint32_t VCOfreq = freq_Hz * 6;
@@ -205,10 +199,17 @@ void SI5351B_frequency(uint32_t freq_Hz)
 	SI5351B_write_reg(40, (p2 & 0x0000FF00) >> 8);				// MSNB_P2[15:8]
 	SI5351B_write_reg(41, (p2 & 0x000000FF));					// MSNB_P2[7:0]
 	
+	/* VCXO */
+	uint32_t VCXO_Param = (uint32_t)(1.03 * (128.0 * (float)a + (float)b / 1000000.0) * (float)APR);
+	
+	SI5351B_write_reg(162, VCXO_Param & 0xFF);					// VCXO_Param[7:0]
+	SI5351B_write_reg(163, (VCXO_Param >> 8) & 0xFF);			// VCXO_Param[15:8]
+	SI5351B_write_reg(164, (VCXO_Param >> 16) & 0x3F);			// VCXO_Param[21:16]
+	
 	/* MULTISYNTH 5 FREQUENCY */
 	a = 6;
 	b = 0;
-	c = 1000000;
+	c = 1;
 	
 	p1 = 128 * a + floor(128 * b / c) - 512;
 	p2 = 128 * b - c * floor(128 * b / c);
@@ -220,7 +221,7 @@ void SI5351B_frequency(uint32_t freq_Hz)
 	SI5351B_write_reg(86, (p1 & 0x000000FF));					// MS5_P1[7:0]
 	SI5351B_write_reg(87, ((c & 0x000F0000) >> 12) | ((p2 & 0x000F0000) >> 16));	// MS5_P3[19:16], MS5_P2[19:16]
 	SI5351B_write_reg(88, (p2 & 0x0000FF00) >> 8);				// MS5_P2[15:8]
-	SI5351B_write_reg(49, (p2 & 0x000000FF));					// MS5_P2[7:0]
+	SI5351B_write_reg(89, (p2 & 0x000000FF));					// MS5_P2[7:0]
 }
 
 
