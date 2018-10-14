@@ -16,7 +16,8 @@
 		0x0		VREFAU		Unbuffered external voltage reference (not buffered in DAC, direct connection)
 		0x1		VDDANA		Voltage supply
 		0x2		VREFAB		Buffered external voltage reference (buffered in DAC)
-		0x3		INTREF		Internal bandgap reference	
+		0x3		INTREF		Internal bandgap reference
+	
 	VOUTx is at tri-state level if DACx is not enabled.
 	
 	The DAC can only maintain its output within one LSB of the desired value for approximately 100µs. When
