@@ -179,14 +179,28 @@ void OSC_disable_DFLL48M(void)
 	1		XOSC
 	2		GCLK
 	
-	Fck = Fckr * (LDR + 1 + LDRFRAC / 16) * (1 / 2^PRESC)
-	
 	PRESC	Division Factor
 	0		DPLL output is divided by 1
 	1		DPLL output is divided by 2
 	2		DPLL output is divided by 4
+	
+	LDR
+	0-2047
+	
+	LDRFRAC
+	0-15
+	
+	Fck = Fckr * (LDR + 1 + LDRFRAC / 16) * (1 / 2^PRESC)
+	
+	Example:
+		48,001,024Hz = 32768Hz * (1463 + 1 + 14/16) * (1 / 2^0)
+		GCLK[0] = 48,001,024Hz
+		
+		50,688,000Hz = 32768Hz * (1545 + 1 + 14/16) * (1 / 2^0)
+		GCLK[0]_DIV = 12
+		GCLK[0] = 4,224,000Hz
 */
-void OSC_enable_FDPLL96M(uint8_t refclk, uint8_t presc)
+void OSC_enable_FDPLL96M(uint8_t refclk, uint8_t presc, uint16_t ldr, uint8_t ldrfrac)
 {
 	if(refclk > 2) OSCCTRL->DPLLCTRLB.bit.REFCLK = 0;			// XOSC32K clock reference
 	else OSCCTRL->DPLLCTRLB.bit.REFCLK = refclk;
@@ -195,8 +209,8 @@ void OSC_enable_FDPLL96M(uint8_t refclk, uint8_t presc)
 	else OSCCTRL->DPLLPRESC.reg = presc;
 	while(OSCCTRL->DPLLSYNCBUSY.bit.DPLLPRESC);					// wait while synchronization is in progress
 	
-	OSCCTRL->DPLLRATIO.bit.LDR = 1463;							// 48,001,024Hz = 32768Hz * (1463 + 1 + 14/16) * (1 / 1^0)
-	OSCCTRL->DPLLRATIO.bit.LDRFRAC = 14;
+	OSCCTRL->DPLLRATIO.bit.LDR = ldr;							// Loop Divider Ratio (0-2047)
+	OSCCTRL->DPLLRATIO.bit.LDRFRAC = ldrfrac;					// Loop Divider Ratio Fractional Part (0-15)
 	while(OSCCTRL->DPLLSYNCBUSY.bit.DPLLRATIO);					// wait while synchronization is in progress
 	
 	OSCCTRL->DPLLCTRLA.bit.ONDEMAND = 0;						// in Standby runs if requested by peripheral

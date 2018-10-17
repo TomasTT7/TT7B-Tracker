@@ -33,10 +33,12 @@
 		0x0		CC100K		GCLK_DAC <= 1.2MHz				(100kSPS)
 		0x1		CC1M		1.2MHz < GCLK_DAC <= 6MHz		(500kSPS)
 		0x2		CC12M		6MHz < GCLK_DAC <= 12MHz		(1MSPS)
+	
+	GCLK[2] must be configured and enabled first.
 */
 void DAC_enable(uint8_t refsel, uint8_t cctrl)
 {
-	GCLK->PCHCTRL[32].bit.GEN = 0;								// source clock for DAC is MCLK
+	GCLK->PCHCTRL[32].bit.GEN = 2;								// source clock for DAC is GCLK[2]
 	GCLK->PCHCTRL[32].bit.CHEN = 1;								// enable clock
 	while(!(GCLK->PCHCTRL[32].bit.CHEN));						// wait for synchronization
 	

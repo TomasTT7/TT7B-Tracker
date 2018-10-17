@@ -33,7 +33,7 @@ void OSC_disable_OSC16M(void);
 void OSC_enable_DFLL48M_closed(void);
 void OSC_enable_DFLL48M_open(void);
 void OSC_disable_DFLL48M(void);
-void OSC_enable_FDPLL96M(uint8_t refclk, uint8_t presc);
+void OSC_enable_FDPLL96M(uint8_t refclk, uint8_t presc, uint16_t ldr, uint8_t ldrfrac);
 void OSC_disable_FDPLL96M(void);
 
 
