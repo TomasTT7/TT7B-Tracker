@@ -15,20 +15,21 @@
 
 
 // Functions
-void TC0_enable(uint8_t prescaler, uint8_t compare0, uint8_t per, uint8_t interrupt);
+void TC0_enable(uint8_t prescaler, uint16_t compare0, uint8_t interrupt);
 void TC0_disable(void);
 void TC0_reset(void);
-void TC0_count_value(uint8_t count);
-void TC0_compare_value_ch0(uint8_t compare);
-void TC0_compare_value_ch1(uint8_t compare);
+void TC0_count_value(uint16_t count);
+void TC0_compare_value_ch0(uint16_t compare);
+void TC0_compare_value_ch1(uint16_t compare);
+void TC0_buffer_add_bit(uint8_t bit, uint8_t reset);
 void TC0_Handler(void);
 
-void TC4_enable(uint8_t prescaler, uint8_t compare0, uint8_t per, uint8_t interrupt);
+void TC4_enable(uint8_t prescaler, uint16_t compare0, uint8_t interrupt);
 void TC4_disable(void);
 void TC4_reset(void);
-void TC4_count_value(uint8_t count);
-void TC4_compare_value_ch0(uint8_t compare);
-void TC4_compare_value_ch1(uint8_t compare);
+void TC4_count_value(uint16_t count);
+void TC4_compare_value_ch0(uint16_t compare);
+void TC4_compare_value_ch1(uint16_t compare);
 void TC4_Handler(void);
 
 #endif // L21_TC_H_
