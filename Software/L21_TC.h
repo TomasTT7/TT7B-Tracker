@@ -22,6 +22,7 @@ void TC0_count_value(uint16_t count);
 void TC0_compare_value_ch0(uint16_t compare);
 void TC0_compare_value_ch1(uint16_t compare);
 void TC0_buffer_add_bit(uint8_t bit, uint8_t reset);
+void TC0_transmission(void);
 void TC0_Handler(void);
 
 void TC4_enable(uint8_t prescaler, uint16_t compare0, uint8_t interrupt);

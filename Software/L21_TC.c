@@ -48,7 +48,8 @@ volatile static uint8_t tone_switch = 1;						// controls switching between 1200
 volatile static uint8_t _n = 0;									// iterates through sine wave tables
 volatile static uint16_t count_bit = 0;							// times the start of the next bit
 
-static uint16_t bit_tx = 0;										// index of bit for transmission
+volatile static uint8_t transmitting = 0;
+volatile static uint16_t bit_tx = 0;							// index of bit for transmission
 static uint16_t buffer_bits;									// holds number of bits inside BUFFER
 static uint8_t buffer[150];										// contains bits for TC0_HANDLER to walk through
 
@@ -98,6 +99,8 @@ void TC0_enable(uint8_t prescaler, uint16_t compare0, uint8_t interrupt)
 	if(interrupt) TC0->COUNT16.INTENSET.bit.MC0 = 1;			// sets corresponding Match or Capture Channel x Interrupt Enable bit
 	NVIC_EnableIRQ(TC0_IRQn);									// interrupts must be globally enabled for interrupt requests to be generated
 	
+	bit_tx = 0;													// initialize first bit in BUFFER - always transmitted as 1200Hz tone
+	
 	TC0->COUNT16.CTRLA.bit.ENABLE = 1;							// enable TC0
 	while(TC0->COUNT16.SYNCBUSY.bit.ENABLE);					// SYNCBUSY.ENABLE will be cleared when the operation is complete.
 }
@@ -114,7 +117,7 @@ void TC0_disable(void)
 	TC0->COUNT16.INTENCLR.bit.MC0 = 1;							// clears corresponding Match or Capture Channel x Interrupt Enable bit
 	
 	GCLK->PCHCTRL[27].bit.CHEN = 0;								// disable TC0 & TC1 clock
-	while(!(GCLK->PCHCTRL[27].bit.CHEN));						// wait for synchronization
+	while((GCLK->PCHCTRL[27].bit.CHEN));						// wait for synchronization
 }
 
 
@@ -181,10 +184,21 @@ void TC0_buffer_add_bit(uint8_t bit, uint8_t reset)
 		return;
 	}
 	
-	uint8_t _byte = buffer_bits / 8;
-	uint8_t _bit = buffer_bits % 8;
+	uint8_t _byte = (buffer_bits - 1) / 8;
+	uint8_t _bit = (buffer_bits - 1) % 8;
 	
 	buffer[_byte] |= (bit << _bit);
+}
+
+
+/*
+	Blocks code execution while TC0_HANDLER handles transmission of individual bits in BUFFER.
+*/
+void TC0_transmission(void)
+{
+	transmitting = 1;
+	
+	while(transmitting);
 }
 
 
@@ -227,6 +241,7 @@ void TC0_Handler(void)
 		else
 		{
 			bit_tx = 0;
+			transmitting = 0;
 		}
 		
 		count_bit = 0;
@@ -299,7 +314,7 @@ void TC4_disable(void)
 	TC4->COUNT16.INTENCLR.bit.MC0 = 1;							// clears corresponding Match or Capture Channel x Interrupt Enable bit
 	
 	GCLK->PCHCTRL[29].bit.CHEN = 0;								// disable TC4 clock
-	while(!(GCLK->PCHCTRL[29].bit.CHEN));						// wait for synchronization
+	while((GCLK->PCHCTRL[29].bit.CHEN));						// wait for synchronization
 }
 
 
