@@ -77,23 +77,24 @@ uint8_t APRS_packet(uint8_t * buffer, uint8_t * callsign, uint8_t ssid, float la
 	buffer[n++] = '!';											// Data Type Identifier
 	buffer[n++] = '/';											// Symbol Table Identifier
 	
-	lat = (90.0f - lat) * 380926.0f;
-	lon = (180.0f + lon) * 190463.0f;
-	alt = log((float)alt * 3.28f) / log(1.002f);
-	alt = (uint16_t)alt % 8281;
+	uint32_t latitude = (90.0 - lat) * 380926.0;
+	uint32_t longitude = (180.0 + lon) * 190463.0;
+	uint16_t altitude = log((float)alt * 3.28084) / log(1.002);
 	
-	
+	n = Base91_encode_u32(latitude, buffer, n);					// Latitude
+	n = Base91_encode_u32(longitude, buffer, n);				// Longitude
 	buffer[n++] = 'O';											// Symbol Code (Balloon)
-	
+	n = Base91_encode_u16(altitude, buffer, n);					// Altitude
+	buffer[n++] = 'W';											// Compression Type Identifier (0b00110110)
 	
 	/* Frame Check Sequence */
 	uint16_t crc = 0xFFFF;
 	
 	for(uint8_t i = 0; i < (n - 12); i++) crc = crc_ccitt_update(crc, buffer[i+12]);
 	
-	crc = ~crc;
-	buffer[n++] = crc & 0xFF;									// FCS is sent low-byte first
-	buffer[n++] = (crc >> 8) & 0xFF;							// and with bits flipped
+	crc = ~crc;													// FCS is sent with bits flipped low-byte first
+	buffer[n++] = crc & 0xFF;
+	buffer[n++] = (crc >> 8) & 0xFF;
 	
 	/* End Flags */
 	buffer[n++] = 0x7E;
@@ -157,18 +158,42 @@ void APRS_prepare_bitstream(uint8_t * data, uint8_t len)
 
 
 /*
-	Function to encode values (max 8280) to Base91 format for APRS telemetry.
+	Encodes values (max 8280) to Base91 format for APRS telemetry.
 */
-void Base91_encode(uint16_t number, uint8_t *buffer)
+uint8_t Base91_encode_u16(uint16_t number, uint8_t *buffer, uint8_t n)
 {
 	if(number > 8280)											// maximum acceptable value
 	{
-		 buffer[num++] = '!';									// decoded as 0
-		 buffer[num++] = '!';									// decoded as 0
+		buffer[n++] = '!';										// decoded as 0
+		buffer[n++] = '!';										// decoded as 0
 	}else{
-		buffer[num++] = (number / 91) + '!';
-		buffer[num++] = (number % 91) + '!';
+		buffer[n++] = (number / 91) + '!';
+		buffer[n++] = (number % 91) + '!';
 	}
+	
+	return n;
+}
+
+
+/*
+	Encodes values (max 68574961) to Base91 format for APRS telemetry.
+*/
+uint8_t Base91_encode_u32(uint32_t number, uint8_t *buffer, uint8_t n)
+{
+	if(number > 68574961)										// maximum acceptable value
+	{
+		buffer[n++] = '!';										// decoded as 0
+		buffer[n++] = '!';										// decoded as 0
+		buffer[n++] = '!';										// decoded as 0
+		buffer[n++] = '!';										// decoded as 0
+	}else{
+		buffer[n++] = (number / 753571) + '!';
+		buffer[n++] = (number % 753571 / 8281) + '!';
+		buffer[n++] = (number % 753571 % 8281 / 91) + '!';
+		buffer[n++] = (number % 753571 % 8281 % 91) + '!';
+	}
+	
+	return n;
 }
 
 
