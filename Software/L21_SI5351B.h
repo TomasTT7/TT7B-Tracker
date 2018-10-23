@@ -19,8 +19,9 @@
 #include "stdint.h"
 
 
-#define SI5351B_ADDRESS		0x60
-#define TCXO_FREQ			26000000
+#define SI5351B_ADDRESS		0x60								// I2C slave address
+#define TCXO_FREQ			26000000							// [Hz] frequency of TCXO reference
+#define FREQ_OFFSET			3900								// [Hz] fixed offset to center AFSK modulation on desired frequency
 
 
 // Functions

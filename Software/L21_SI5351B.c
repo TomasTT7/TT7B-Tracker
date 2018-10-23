@@ -181,7 +181,7 @@ void SI5351B_deinit(void)
 void SI5351B_frequency(uint32_t freq_Hz, uint8_t APR)
 {
 	/* PLLB VCO FREQUENCY */
-	uint32_t VCOfreq = freq_Hz * 6;
+	uint32_t VCOfreq = (freq_Hz + FREQ_OFFSET) * 6;
 	
 	uint32_t a = VCOfreq / TCXO_FREQ;
 	uint32_t b = (uint64_t)(VCOfreq % TCXO_FREQ) * 1000000 / (uint64_t)TCXO_FREQ;

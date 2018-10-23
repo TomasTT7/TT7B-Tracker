@@ -53,8 +53,12 @@ volatile static uint16_t bit_tx = 0;							// index of bit for transmission
 static uint16_t buffer_bits;									// holds number of bits inside BUFFER
 static uint8_t buffer[150];										// contains bits for TC0_HANDLER to walk through
 
-static uint16_t sine_1200hz[16] = {2048, 2479, 2844, 3088, 3174, 3088, 2844, 2479, 2048, 1617, 1252, 1008, 922, 1008, 1252, 1617};
-static uint16_t sine_2200hz[16] = {2048, 2831, 3495, 3939, 4095, 3939, 3495, 2831, 2048, 1264, 600, 156, 0, 156, 600, 1264};
+//static uint16_t sine_1200hz[16] = {2048, 2479, 2844, 3088, 3174, 3088, 2844, 2479, 2048, 1617, 1252, 1008, 922, 1008, 1252, 1617};
+//static uint16_t sine_2200hz[16] = {2048, 2831, 3495, 3939, 4095, 3939, 3495, 2831, 2048, 1264, 600, 156, 0, 156, 600, 1264};
+static uint16_t sine_2200hz[32] = {2048, 2447, 2831, 3185, 3495, 3750, 3939, 4056, 4095, 4056, 3939, 3750, 3495, 3185, 2831, 2447,
+								   2048, 1648, 1264, 910, 600, 345, 156, 39, 0, 39, 156, 345, 600, 910, 1264, 1648};
+static uint16_t sine_1200hz[32] = {2048, 2268, 2479, 2674, 2844, 2984, 3088, 3152, 3174, 3152, 3088, 2984, 2844, 2674, 2479, 2268,
+								   2048, 1828, 1617, 1422, 1252, 1112, 1008, 944, 922, 944, 1008, 1112, 1252, 1422, 1617, 1828};
 
 
 /*
@@ -98,8 +102,6 @@ void TC0_enable(uint8_t prescaler, uint16_t compare0, uint8_t interrupt)
 	
 	if(interrupt) TC0->COUNT16.INTENSET.bit.MC0 = 1;			// sets corresponding Match or Capture Channel x Interrupt Enable bit
 	NVIC_EnableIRQ(TC0_IRQn);									// interrupts must be globally enabled for interrupt requests to be generated
-	
-	bit_tx = 0;													// initialize first bit in BUFFER - always transmitted as 1200Hz tone
 	
 	TC0->COUNT16.CTRLA.bit.ENABLE = 1;							// enable TC0
 	while(TC0->COUNT16.SYNCBUSY.bit.ENABLE);					// SYNCBUSY.ENABLE will be cleared when the operation is complete.
@@ -196,7 +198,12 @@ void TC0_buffer_add_bit(uint8_t bit, uint8_t reset)
 */
 void TC0_transmission(void)
 {
-	transmitting = 1;
+	_n = 0;														// initialize sine wave table index
+	bit_tx = 0;													// initialize to first bit in BUFFER
+	count_bit = 0;												// initialize interrupt counter
+	tone_switch = 1;											// transmissions always start with 1200Hz tone
+	
+	transmitting = 1;											// set flag
 	
 	while(transmitting);
 }
@@ -207,14 +214,14 @@ void TC0_transmission(void)
 */
 void TC0_Handler(void)
 {
-	TC0->COUNT16.INTFLAG.bit.MC0 = 1;							// clears corresponding Match or Capture Channel x interrupt flag
+	TC0->COUNT16.INTFLAG.reg = TC_INTFLAG_MC0;					// clears corresponding Match or Capture Channel x interrupt flag
 	
 	uint16_t _current = TC0->COUNT16.CC[0].reg;
-	TC0->COUNT16.CC[0].reg = _current + 858;					// These bits contain the compare/capture value in 16-bit TC mode.
+	TC0->COUNT16.CC[0].reg = _current + 660;					// These bits contain the compare/capture value in 16-bit TC mode.
 	
 	count_bit++;
 	
-	if(count_bit >= 16)											// next bit - 1200bps (19,200 / 16 = 1200)
+	if(count_bit >= 32)											// next bit - 1200bps (19,200 / 16 = 1200)
 	{
 		bit_tx++;
 		
@@ -228,20 +235,24 @@ void TC0_Handler(void)
 				if(tone_switch)									// change to 2200Hz
 				{
 					tone_switch = 0;
-					TC4->COUNT8.INTENSET.bit.MC0 = 1;			// sets corresponding Match or Capture Channel x Interrupt Enable bit
+					
+					TC4->COUNT16.COUNT.reg = 0;					// These bits contain the current counter value.
+					TC4->COUNT16.CC[0].reg = 0;					// These bits contain the compare/capture value in 16-bit TC mode.
+					TC4->COUNT16.INTENSET.bit.MC0 = 1;			// sets corresponding Match or Capture Channel x Interrupt Enable bit
 				}
 				else											// change to 1200Hz
 				{
 					tone_switch = 1;
-					TC4->COUNT8.INTENCLR.bit.MC0 = 1;			// clears corresponding Match or Capture Channel x Interrupt Enable bit
+					
+					TC4->COUNT16.INTENCLR.bit.MC0 = 1;			// clears corresponding Match or Capture Channel x Interrupt Enable bit
+					TC4->COUNT16.INTFLAG.reg = TC_INTFLAG_MC0;	// clears corresponding Match or Capture Channel x interrupt flag
 				}
 			}
 			// else '1' keep tone						
 		}
 		else
 		{
-			bit_tx = 0;
-			transmitting = 0;
+			transmitting = 0;									// clear flag - end transmission
 		}
 		
 		count_bit = 0;
@@ -249,7 +260,7 @@ void TC0_Handler(void)
 	
 	if(tone_switch)
 	{	
-		if(_n >= 16) _n = 0;
+		if(_n >= 32) _n = 0;
 		
 		DAC->DATA[1].reg = sine_1200hz[_n++];					// contains 12-bit value that is converted to voltage by DAC1
 	}
@@ -366,12 +377,12 @@ void TC4_compare_value_ch1(uint16_t compare)
 */
 void TC4_Handler(void)
 {
-	TC4->COUNT16.INTFLAG.bit.MC0 = 1;							// clears corresponding Match or Capture Channel x interrupt flag
+	TC4->COUNT16.INTFLAG.reg = TC_INTFLAG_MC0;					// clears corresponding Match or Capture Channel x interrupt flag
 	
 	uint16_t _current = TC4->COUNT16.CC[0].reg;
-	TC4->COUNT16.CC[0].reg = _current + 468;					// These bits contain the compare/capture value in 16-bit TC mode.
+	TC4->COUNT16.CC[0].reg = _current + 360;					// These bits contain the compare/capture value in 16-bit TC mode.
 	
-	if(_n >= 16) _n = 0;
+	if(_n >= 32) _n = 0;
 		
 	DAC->DATA[1].reg = sine_2200hz[_n++];						// contains 12-bit value that is converted to voltage by DAC1
 }
