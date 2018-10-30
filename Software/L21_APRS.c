@@ -24,16 +24,39 @@
 
 /*
 	STRUCTURE:
-	
-		!/5MHXS(SVOHNW		/YYYYXXXXOcsT
+		
+		!/5LD\S*,yON2W?[%)Bxe`7,.>B!1d3_!?K+5MHWS(KY"`8S(pNxj?[%)Bxe`$V.>B!1d2V
 		
 		!		Data Type Identifier
 		/		Symbol Table Identifier
-		5MHX	Latitude
-		S(SV	Longitude
+		5LD\	Latitude
+		S*,y	Longitude
 		O		Symbol Code (Balloon)
-		HN		Altitude
+		N2		Altitude
 		W		Compression Type Identifier
+		
+		?[		Temperature MCU
+		%)		Temperature THERMISTOR_1
+		Bx		Temperature THERMISTOR_2
+		e`		Temperature MS5607_1
+		7,		Temperature MS5607_2
+		.>B		Pressure MS5607_1
+		!1d		Pressure MS5607_2
+		3_		Battery Voltage
+		!?K+	Altitude (precise: 0-99m), Satellites, Active Time, Last Reset
+		
+		5MHW	Backlog: Latitude
+		S(KY	Backlog: Longitude
+		"`8S	Backlog: Altitude (precise: 0-50,000m)
+		(pNxj	Backlog: Year, Month, Day, Hour, Minute, Active Time
+		?[		Backlog: Temperature MCU
+		%)		Backlog: Temperature THERMISTOR_1
+		Bx		Backlog: Temperature THERMISTOR_2
+		e`		Backlog: Temperature MS5607_1
+		$V		Backlog: Temperature MS5607_2
+		.>B		Backlog: Pressure MS5607_1
+		!1d		Backlog: Pressure MS5607_2
+		2V		Backlog: Battery Voltage
 */
 uint8_t APRS_packet(uint8_t * buffer, uint8_t * callsign, uint8_t ssid, float lat, float lon, uint16_t alt, uint16_t temp_mcu,
 					uint16_t temp_th1, uint16_t temp_th2, float temp_ms1, float temp_ms2, uint32_t pres_ms1, uint32_t pres_ms2,
@@ -122,6 +145,57 @@ uint8_t APRS_packet(uint8_t * buffer, uint8_t * callsign, uint8_t ssid, float la
 	buffer[n++] = 0x7E;
 	
 	return n;
+}
+
+
+/*
+	STRUCTURE:
+	
+		5MHWS(KY"`8S(pNxj?[%)Bxe`$V.>B!1d2V
+	
+		5MHW	Latitude
+		S(KY	Longitude
+		"`8S	Altitude (precise: 0-50,000m)
+		(pNxj	Year, Month, Day, Hour, Minute, Active Time
+		?[		Temperature MCU
+		%)		Temperature THERMISTOR_1
+		Bx		Temperature THERMISTOR_2
+		e`		Temperature MS5607_1
+		$V		Temperature MS5607_2
+		.>B		Pressure MS5607_1
+		!1d		Pressure MS5607_2
+		2V		Battery Voltage
+*/
+void APRS_backlog_encode(uint8_t * buffer, float lat, float lon, uint16_t alt, uint16_t temp_mcu, uint16_t temp_th1,
+						 uint16_t temp_th2, float temp_ms1, float temp_ms2, uint32_t pres_ms1, uint32_t pres_ms2,
+						 uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint16_t battV,
+						 uint8_t sats, uint16_t time, uint8_t rcause)
+{
+	uint8_t n = 0;
+	
+	uint32_t latitude = (90.0 - lat) * 380926.0;
+	uint32_t longitude = (180.0 + lon) * 190463.0;
+	
+	uint8_t reset = APRS_reset_source(rcause);
+	uint32_t data2 = APRS_data_block_2(alt, sats, reset);
+	uint64_t data3 = APRS_data_block_3(year, month, day, hour, minute, time);
+	
+	n = Base91_encode_u32(latitude, buffer, n);					// Latitude
+	n = Base91_encode_u32(longitude, buffer, n);				// Longitude
+	n = Base91_encode_u32(data2, buffer, n);					// Data Block 2
+	n = Base91_encode_u40(data3, buffer, n);					// Data Block 3
+	n = Base91_encode_u16(temp_mcu, buffer, n);					// Temperature MCU
+	n = Base91_encode_u16(temp_th1, buffer, n);					// Temperature THERMISTOR_1
+	n = Base91_encode_u16(temp_th2, buffer, n);					// Temperature THERMISTOR_2
+	
+	temp_ms1 = temp_ms1 * 50.0 + 4000.0;
+	temp_ms2 = temp_ms2 * 50.0 + 4000.0;
+	
+	n = Base91_encode_u16((uint16_t)temp_ms1, buffer, n);		// Temperature MS5607_1
+	n = Base91_encode_u16((uint16_t)temp_ms2, buffer, n);		// Temperature MS5607_2
+	n = Base91_encode_u24(pres_ms1, buffer, n);					// Pressure MS5607_1
+	n = Base91_encode_u24(pres_ms2, buffer, n);					// Pressure MS5607_2
+	n = Base91_encode_u16(battV, buffer, n);					// Battery Voltage
 }
 
 

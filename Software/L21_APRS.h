@@ -14,6 +14,10 @@
 uint8_t APRS_packet(uint8_t * buffer, uint8_t * callsign, uint8_t ssid, float lat, float lon, uint16_t alt, uint16_t temp_mcu,
 					uint16_t temp_th1, uint16_t temp_th2, float temp_ms1, float temp_ms2, uint32_t pres_ms1, uint32_t pres_ms2,
 					uint16_t battV, uint8_t sats, uint16_t time, uint8_t rcause);
+void APRS_backlog_encode(uint8_t * buffer, float lat, float lon, uint16_t alt, uint16_t temp_mcu, uint16_t temp_th1,
+						 uint16_t temp_th2, float temp_ms1, float temp_ms2, uint32_t pres_ms1, uint32_t pres_ms2,
+						 uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint16_t battV,
+						 uint8_t sats, uint16_t time, uint8_t rcause);
 void APRS_prepare_bitstream(uint8_t * data, uint8_t len);
 uint8_t APRS_altitude_precise(uint16_t alt);
 uint8_t APRS_reset_source(uint8_t rcause);
