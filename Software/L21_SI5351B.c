@@ -245,10 +245,10 @@ void SI5351B_disable_output(void)
 
 /*
 	CLK5_IDRV (CLK5)
-	00	2 mA
-	01	4 mA
-	10	6 mA
-	11	8 mA
+	0b00	2 mA
+	0b01	4 mA
+	0b10	6 mA
+	0b11	8 mA
 */
 void SI5351B_drive_strength(uint8_t drvStr)
 {
