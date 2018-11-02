@@ -49,10 +49,12 @@ except:
 
 for packet in packets:
     temp = html.tostring(packet)
-    temp = temp.replace('&gt;', '>').encode('utf-8')
-    temp = temp.replace('&#194;', '').encode('utf-8')
-    temp = temp.replace('&#160;', ' ').encode('utf-8')
+    
     tempclean = cleanhtml(temp)
+    tempclean = tempclean.replace('&gt;', '>').encode('utf-8')
+    tempclean = tempclean.replace('&lt;', '<').encode('utf-8')
+    tempclean = tempclean.replace('&#194;', '').encode('utf-8')
+    tempclean = tempclean.replace('&#160;', ' ').encode('utf-8')
 
     temp1 = tempclean.split(' ', 3)
     temp2 = temp1[3].split('>', 1)
