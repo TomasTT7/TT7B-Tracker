@@ -11,6 +11,7 @@ import math
 
 
 input_file = 'APRSfi_grab OK7DMT-1.txt'
+#input_file = 'DireWolf_grab OK7DMT-1.txt'
 utc_offset = 1
 
 
@@ -67,7 +68,9 @@ for packet in packets:
 
     # Receiver Date & Time UTC
     d = datetime.strptime(parts[0] + ' ' + parts[1], '%Y-%m-%d %H:%M:%S')
-    d = d - timedelta(hours=utc_offset)
+    
+    if parts[2] != 'UTC':
+        d = d - timedelta(hours=utc_offset)
 
     year.append(d.year)
     month.append(d.month)
