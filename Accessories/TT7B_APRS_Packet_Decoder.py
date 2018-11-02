@@ -7,7 +7,7 @@ import ttk
 import math
 
 
-reset = {0: "none",
+reset = {0: "NONE",
          1: "POR",
          2: "BOD",
          3: "EXT",
