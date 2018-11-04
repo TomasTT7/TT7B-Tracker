@@ -46,7 +46,7 @@ last_reset = {0: "NONE",
               5: "SYS"}
 
 year, month, day, hour, minute, second, callsign, latitude, longitude, altitude = ([] for i in range(10))
-tempMCU, tempTH1, tempTH2, tempMS1, tempMS2, presMS1, presMS2, battV, light, altitude_precise = ([] for i in range(10))
+tempMCU, tempTH1, tempTH2, tempMS1, tempMS2, presMS1, presMS2, battV, light, altitude_offset = ([] for i in range(10))
 satellites, time_active, reset, latitudeB, longitudeB, altitude_preciseB, satellitesB, resetB, yearB, monthB = ([] for i in range(10))
 dayB, hourB, minuteB, time_activeB, tempMCUB, tempTH1B, tempTH2B, tempMS1B, tempMS2B, presMS1B = ([] for i in range(10))
 presMS2B, battVB, lightB, callsignB = ([] for i in range(4))
@@ -92,7 +92,7 @@ for packet in packets:
     longitude.append(lon)
 
     alt = Base91_2(telemetry[11:13])
-    alt = 10.0**(math.log(1.002) / math.log(10) * alt) * 0.3048
+    alt = 1.002**(alt) * 0.3048
     altitude.append(alt)
     
     tMCU = Base91_2(telemetry[14:16])
@@ -130,7 +130,7 @@ for packet in packets:
     light.append(lit)
 
     data1 = Base91_4(telemetry[34:38])
-    altitude_precise.append(int(data1 / 6 / 1000 / 17))
+    altitude_offset.append(int(data1 / 6 / 1000 / 17))
     satellites.append(int(data1 / 6 / 1000 % 17))
     time_active.append(int(data1 / 6 % 1000))
     reset.append(data1 % 6)
@@ -204,7 +204,7 @@ output = []
 for i in range(len(year)):
     output.append("""{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d},{:s},{:.5f},{:.5f},{:.1f},{:d},{:d},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:d},{:d},{:.3f},{:.4f},{:d},{:.1f},{:s},L"""
                   .format(year[i], month[i], day[i], hour[i], minute[i], second[i], callsign[i], latitude[i], longitude[i],
-                          altitude[i], int(altitude[i] + altitude_precise[i]), altitude_precise[i], tempMCU[i], tempTH1[i],
+                          altitude[i], int(altitude[i]) + altitude_offset[i], altitude_offset[i], tempMCU[i], tempTH1[i],
                           tempTH2[i], tempMS1[i], tempMS2[i], presMS1[i], presMS2[i], battV[i], light[i], satellites[i],
                           time_active[i] / 10.0, last_reset[reset[i]]))
 

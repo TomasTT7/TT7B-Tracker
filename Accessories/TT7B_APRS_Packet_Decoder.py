@@ -131,10 +131,10 @@ class Application(Frame):
         self.light_value2 = Label(self, text="")
         self.light_value2.grid(row=16, column=3, sticky=W)
 
-        self.altitudeP_label = Label(self, text="Altitude precise:")
-        self.altitudeP_label.grid(row=17, column=1, sticky=W)
-        self.altitudeP_value = Label(self, text="")
-        self.altitudeP_value.grid(row=17, column=2, sticky=W)
+        self.altitudeO_label = Label(self, text="Altitude offset:")
+        self.altitudeO_label.grid(row=17, column=1, sticky=W)
+        self.altitudeO_value = Label(self, text="")
+        self.altitudeO_value.grid(row=17, column=2, sticky=W)
 
         self.data1_value2 = Label(self, text="")
         self.data1_value2.grid(row=17, column=3, sticky=W)
@@ -312,7 +312,7 @@ class Application(Frame):
             self.longitude_value2.config(text=content[6:10])
             
             altitude = self.Base91_2(content[11:13])
-            altitude = 10.0**(math.log(1.002) / math.log(10) * altitude) * 0.3048
+            altitude = 1.002**(altitude) * 0.3048
             self.altitude_value.config(text='{0:.0f}'.format(altitude) + "m")
             self.altitude_value2.config(text=content[11:13])
 
@@ -369,11 +369,11 @@ class Application(Frame):
             self.light_value2.config(text=content[32:34])
 
             data1 = self.Base91_4(content[34:38])
-            altitudeP = int(data1 / 6 / 1000 / 17)
+            altitudeO = int(data1 / 6 / 1000 / 17)
             sats = int(data1 / 6 / 1000 % 17)
             time = int(data1 / 6 % 1000)
             res = data1 % 6
-            self.altitudeP_value.config(text='{0:.0f}'.format(altitudeP) + "m" + " (" + str(altitudeP + int(altitude)) + "m)")
+            self.altitudeO_value.config(text='{0:.0f}'.format(altitudeO) + "m" + " (" + str(altitudeO + int(altitude)) + "m)")
             self.sats_value.config(text='{0:.0f}'.format(sats))
             self.time_value.config(text='{0:.1f}'.format(time / 10.0) + "s")
             self.res_value.config(text=reset[res])
@@ -555,7 +555,7 @@ class Application(Frame):
             self.light_value.config(text="")
             self.light_value2.config(text="")
 
-            self.altitudeP_value.config(text="")
+            self.altitudeO_value.config(text="")
             self.sats_value.config(text="")
             self.time_value.config(text="")
             self.res_value.config(text="")

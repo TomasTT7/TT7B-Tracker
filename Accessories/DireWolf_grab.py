@@ -27,6 +27,12 @@ def Base91_encode_4(number):
     c4 = int(number % 753571 % 8281 % 91)
     return chr(c1 + 33) + chr(c2 + 33) + chr(c3 + 33) + chr(c4 + 33)
 
+def Base91_decode_4(string):
+    """ Decode a 4 symbol Base91 code """
+    num = (ord(string[0]) - 33) * 753571 + (ord(string[1]) - 33) * 8281 \
+        + (ord(string[2]) - 33) * 91 + (ord(string[3]) - 33)
+    return num
+
 
 f = open(input_file, 'r')
 rawinput = f.read()
@@ -50,9 +56,13 @@ for packet in packets:
     altitude =  parts[14]
     comment = parts[21]
 
+    data1 = Base91_decode_4(comment[22:26])
+    altitude_offset = int(data1 / 6 / 1000 / 17)
+    altitude_precise = int(float(altitude)) + altitude_offset
+    
     _latitude = (90.0 - float(latitude)) * 380926.0
     _longitude = (180.0 + float(longitude)) * 190463.0
-    _altitude = math.log(float(altitude) * 3.28084, 10) / math.log(1.002, 10);
+    _altitude = math.log(float(altitude_precise) * 3.28084, 10) / math.log(1.002, 10)
 
     output = timestamp[0:10] + ' ' + timestamp[11:19] + ' UTC ' + source + ' ' + datatype + symbolcode[0] \
              + Base91_encode_4(_latitude) + Base91_encode_4(_longitude) + symbolcode[1] + Base91_encode_2(_altitude) + 'W' + comment[2:-1]
