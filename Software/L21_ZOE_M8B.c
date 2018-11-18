@@ -65,6 +65,25 @@
 	AssistNow Autonomous provides aiding information based on previous broadcast satellite ephemeris data
 	downloaded to and stored by the ZOE-M8B receiver. It automatically generates accurate predictions
 	of satellite orbital data that is usable for future GNSS position fixes.
+	
+	BAUD RATE		8 bytes		50 bytes	100 bytes
+		4800		16.7ms		104ms		208ms
+		9600		8.3ms		52ms		104ms
+		19200		4.2ms		26ms		52ms
+		38400		2.1ms		13ms		26ms
+		57600		1.39ms		8.7ms		17.4ms
+		115200		0.69ms		4.3ms		8.7ms
+		230400		0.35ms		2.2ms		4.3ms
+		460800		0.17ms		1.1ms		2.2ms
+	
+	RESPONSE TIMES (at 9600 baud)
+		ZOE_M8B_set_port					65.1ms
+		ZOE_M8B_power_saving				38.0ms
+		ZOE_M8B_set_dynamic_model			65.2ms
+		ZOE_M8B_set_GNSS_system				92.5ms
+		ZOE_M8B_get_dynamic_model			73.8ms
+		ZOE_M8B_save_current_configuration	38.2ms
+		ZOE_M8B_get_solution				periodic
 */
 
 
@@ -72,6 +91,14 @@
 #include "L21_ZOE_M8B.h"
 #include "L21_SERCOM_USART.h"
 #include "L21_SysTick.h"
+
+
+/*
+	GENERAL RETURN VALUES
+		0		checksum not verified, UBX-ACK-ACK not received
+		1		checksum verified, UBX-ACK-ACK received 
+		2		UART receive byte TIMEOUT
+*/
 
 
 /*
@@ -138,14 +165,20 @@
 	
 	UBX-MON-VER (48 + 30 * N bytes)
 */
-uint8_t ZOE_M8B_get_version(uint8_t * buffer)
+uint8_t ZOE_M8B_get_version(uint8_t * buffer, uint32_t timeout)
 {
 	static uint8_t requestUBX_MON_VER[8] = {0xB5, 0x62, 0x0A, 0x04, 0x00, 0x00, 0x0E, 0x34};
 	ZOE_M8B_send_message(requestUBX_MON_VER, 8);
 	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
 	for(uint8_t i = 0; i < 46; i++)
 	{
-		buffer[i] = SERCOM_USART_read_byte();
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
 	}
 	
 	// unpredictable response length -> don't verify checksum
@@ -158,14 +191,20 @@ uint8_t ZOE_M8B_get_version(uint8_t * buffer)
 /*
 	UBX-NAV-PVT (100 bytes)
 */
-uint8_t ZOE_M8B_get_solution(uint8_t * buffer)
+uint8_t ZOE_M8B_get_solution(uint8_t * buffer, uint32_t timeout)
 {
 	static uint8_t requestUBX_NAV_PVT[8] = {0xB5, 0x62, 0x01, 0x07, 0x00, 0x00, 0x08, 0x19};
 	ZOE_M8B_send_message(requestUBX_NAV_PVT, 8);
 	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
 	for(uint8_t i = 0; i < 100; i++)
 	{
-		buffer[i] = SERCOM_USART_read_byte();
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
 	}
 	
 	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 100);
@@ -189,7 +228,7 @@ uint8_t ZOE_M8B_get_solution(uint8_t * buffer)
 	
 	The default 1s periodic NMEA output rate must be changed to zero.
 */
-uint8_t ZOE_M8B_get_NMEA_message(uint8_t message, uint8_t * buffer)
+uint8_t ZOE_M8B_get_NMEA_message(uint8_t message, uint8_t * buffer, uint32_t timeout)
 {
 	switch(message)
 	{
@@ -227,12 +266,17 @@ uint8_t ZOE_M8B_get_NMEA_message(uint8_t message, uint8_t * buffer)
 			break;
 	}
 	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
 	uint8_t i = 0;
 	
 	while(1)
 	{
-		buffer[i++] = SERCOM_USART_read_byte();
+		buffer[i++] = SERCOM_USART_read_byte(&_timeout);
 		if(buffer[i-1] == 0x0D) return i;
+		
+		if(!_timeout) return 0;									// times out if first response byte doesn't show up in time
 	}
 }
 
@@ -242,14 +286,20 @@ uint8_t ZOE_M8B_get_NMEA_message(uint8_t message, uint8_t * buffer)
 	
 	UBX-CFG-NAV5 (44 bytes)
 */
-uint8_t ZOE_M8B_get_dynamic_model(uint8_t * buffer)
+uint8_t ZOE_M8B_get_dynamic_model(uint8_t * buffer, uint32_t timeout)
 {
 	static uint8_t requestUBX_CFG_NAV5[8] = {0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0x2A, 0x84};
 	ZOE_M8B_send_message(requestUBX_CFG_NAV5, 8);
 	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
 	for(uint8_t i = 0; i < 44; i++)
 	{
-		buffer[i] = SERCOM_USART_read_byte();
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
 	}
 	
 	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 44);
@@ -271,14 +321,20 @@ uint8_t ZOE_M8B_get_dynamic_model(uint8_t * buffer)
 	
 	UBX-NAV-AOPSTATUS (24 bytes)
 */
-uint8_t ZOE_M8B_get_ANA_status(uint8_t * buffer)
+uint8_t ZOE_M8B_get_ANA_status(uint8_t * buffer, uint32_t timeout)
 {
 	static uint8_t requestUBX_NAV_AOPSTATUS[8] = {0xB5, 0x62, 0x01, 0x60, 0x00, 0x00, 0x61, 0x24};
 	ZOE_M8B_send_message(requestUBX_NAV_AOPSTATUS, 8);
 	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
 	for(uint8_t i = 0; i < 24; i++)
 	{
-		buffer[i] = SERCOM_USART_read_byte();
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
 	}
 	
 	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 24);
@@ -296,14 +352,20 @@ uint8_t ZOE_M8B_get_ANA_status(uint8_t * buffer)
 	
 	UBX-NAV-ODO (28 bytes)
 */
-uint8_t ZOE_M8B_get_odometer_distance(uint8_t * buffer)
+uint8_t ZOE_M8B_get_odometer_distance(uint8_t * buffer, uint32_t timeout)
 {
 	static uint8_t requestUBX_NAV_ODO[8] = {0xB5, 0x62, 0x01, 0x09, 0x00, 0x00, 0x0A, 0x1F};
 	ZOE_M8B_send_message(requestUBX_NAV_ODO, 8);
 	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
 	for(uint8_t i = 0; i < 28; i++)
 	{
-		buffer[i] = SERCOM_USART_read_byte();
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
 	}
 	
 	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 28);
@@ -327,19 +389,343 @@ uint8_t ZOE_M8B_get_odometer_distance(uint8_t * buffer)
 	
 	UBX-NAV-DOP (26 bytes)
 */
-uint8_t ZOE_M8B_get_dilution_of_precision(uint8_t * buffer)
+uint8_t ZOE_M8B_get_dilution_of_precision(uint8_t * buffer, uint32_t timeout)
 {
 	static uint8_t requestUBX_NAV_DOP[8] = {0xB5, 0x62, 0x01, 0x04, 0x00, 0x00, 0x05, 0x10};
 	ZOE_M8B_send_message(requestUBX_NAV_DOP, 8);
 	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
 	for(uint8_t i = 0; i < 26; i++)
 	{
-		buffer[i] = SERCOM_USART_read_byte();
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
 	}
 	
 	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 26);
 	
 	if(checksum) return 1;
+	else return 0;
+}
+
+
+/*
+	iTOW		GPS time of week of the navigation epoch
+	fTOW		Fractional part of: (iTOW * 1e-3) + (fTOW * 1e-9)
+	week		GPS week number of the navigation epoch
+	leapS		GPS leap seconds
+	valid		flags: towValid, weekValid, leapSValid
+	tAcc		Time Accuracy Estimate
+	
+	UBX-NAV-TIMEGPS (24 bytes)
+*/
+uint8_t ZOE_M8B_get_GPS_time_solution(uint8_t * buffer, uint32_t timeout)
+{
+	static uint8_t requestUBX_NAV_TIMEGPS[8] = {0xB5, 0x62, 0x01, 0x20, 0x00, 0x00, 0x21, 0x64};
+	ZOE_M8B_send_message(requestUBX_NAV_TIMEGPS, 8);
+	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
+	for(uint8_t i = 0; i < 24; i++)
+	{
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
+	}
+	
+	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 24);
+	
+	if(checksum) return 1;
+	else return 0;
+}
+
+
+/*
+	iTOW		GPS time of week of the navigation epoch
+	gpsFix		no fix, dead reckoning, 2D-fix, 3D-fix, GPS + dead reckoning, Time only fix
+	flags		gpsFixOk, diffSoln, wknSet, towSet
+	fixStat		diffCorr, mapMatching
+	flags2		psmState, spoofDetState
+	ttff		Time to first fix
+	msss		Milliseconds since Startup / Reset
+	
+	UBX-NAV-STATUS (24 bytes)
+*/
+uint8_t ZOE_M8B_get_navigation_status(uint8_t * buffer, uint32_t timeout)
+{
+	static uint8_t requestUBX_NAV_STATUS[8] = {0xB5, 0x62, 0x01, 0x03, 0x00, 0x00, 0x04, 0x0D};
+	ZOE_M8B_send_message(requestUBX_NAV_STATUS, 8);
+	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
+	for(uint8_t i = 0; i < 24; i++)
+	{
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
+	}
+	
+	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 24);
+	
+	if(checksum) return 1;
+	else return 0;
+}
+
+
+/*
+	gnssId	GNSS
+	0		GPS
+	1		SBAS
+	2		Galileo
+	3		BeiDou
+	4		IMES
+	5		QZSS
+	6		GLONASS
+	
+	UBX-CFG-GNSS (68 bytes)
+*/
+uint8_t ZOE_M8B_get_GNSS_system(uint8_t * buffer, uint32_t timeout)
+{
+	static uint8_t requestUBX_CFG_GNSS[8] = {0xB5, 0x62, 0x06, 0x3E, 0x00, 0x00, 0x44, 0xD2};
+	ZOE_M8B_send_message(requestUBX_CFG_GNSS, 8);
+	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
+	for(uint8_t i = 0; i < 68; i++)
+	{
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
+	}
+	
+	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 68);
+	
+	if(checksum) return 1;
+	else return 0;
+}
+
+
+/*
+	UBX-CFG-RATE (14 bytes)
+*/
+uint8_t ZOE_M8B_get_update_rate(uint8_t * buffer, uint32_t timeout)
+{
+	static uint8_t requestUBX_CFG_RATE[8] = {0xB5, 0x62, 0x06, 0x08, 0x00, 0x00, 0x0E, 0x30};
+	ZOE_M8B_send_message(requestUBX_CFG_RATE, 8);
+	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
+	for(uint8_t i = 0; i < 14; i++)
+	{
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
+	}
+	
+	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 14);
+	
+	if(checksum) return 1;
+	else return 0;
+}
+
+
+/*
+	PORT	INTERFACE
+	0		DDC (I2C compatible)
+	1		UART 1
+	2		USB
+	3		SPI
+	
+	UBX-CFG-PRT (28 bytes)
+*/
+uint8_t ZOE_M8B_get_port(uint8_t * buffer, uint32_t timeout)
+{
+	static uint8_t requestUBX_CFG_PRT[9] = {0xB5, 0x62, 0x06, 0x00, 0x01, 0x00, 0x01, 0x08, 0x22};
+	ZOE_M8B_send_message(requestUBX_CFG_PRT, 9);
+	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
+	for(uint8_t i = 0; i < 28; i++)
+	{
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
+	}
+	
+	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 28);
+	
+	if(checksum) return 1;
+	else return 0;
+}
+
+
+/*
+	UBX-CFG-PMS (16 bytes)
+*/
+uint8_t ZOE_M8B_get_power_mode(uint8_t * buffer, uint32_t timeout)
+{
+	static uint8_t requestUBX_CFG_PMS[8] = {0xB5, 0x62, 0x06, 0x86, 0x00, 0x00, 0x8C, 0xAA};
+	ZOE_M8B_send_message(requestUBX_CFG_PMS, 8);
+	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
+	for(uint8_t i = 0; i < 16; i++)
+	{
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
+	}
+	
+	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 16);
+	
+	if(checksum) return 1;
+	else return 0;
+}
+
+
+/*
+	UBX-CFG-PM2 (56 bytes)
+*/
+uint8_t ZOE_M8B_get_power_management(uint8_t * buffer, uint32_t timeout)
+{
+	static uint8_t requestUBX_CFG_PM2[8] = {0xB5, 0x62, 0x06, 0x3B, 0x00, 0x00, 0x41, 0xC9};
+	ZOE_M8B_send_message(requestUBX_CFG_PM2, 8);
+	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
+	for(uint8_t i = 0; i < 56; i++)
+	{
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
+	}
+	
+	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 56);
+	
+	if(checksum) return 1;
+	else return 0;
+}
+
+
+/*
+	UBX-CFG-RXM (10 bytes)
+*/
+uint8_t ZOE_M8B_get_power_saving(uint8_t * buffer, uint32_t timeout)
+{
+	static uint8_t requestUBX_CFG_RXM[8] = {0xB5, 0x62, 0x06, 0x11, 0x00, 0x00, 0x17, 0x4B};
+	ZOE_M8B_send_message(requestUBX_CFG_RXM, 8);
+	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
+	for(uint8_t i = 0; i < 10; i++)
+	{
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
+	}
+	
+	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 10);
+	
+	if(checksum) return 1;
+	else return 0;
+}
+
+
+/*
+	UBX-CFG-NAVX5 (48 bytes)
+*/
+uint8_t ZOE_M8B_get_AssistNow_Autonomous(uint8_t * buffer, uint32_t timeout)
+{
+	static uint8_t requestUBX_CFG_NAVX5[8] = {0xB5, 0x62, 0x06, 0x23, 0x00, 0x00, 0x29, 0x81};
+	ZOE_M8B_send_message(requestUBX_CFG_NAVX5, 8);
+	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
+	for(uint8_t i = 0; i < 48; i++)
+	{
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
+	}
+	
+	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 48);
+	
+	if(checksum) return 1;
+	else return 0;
+}
+
+
+/*
+	UBX-CFG-ODO (28 bytes)
+*/
+uint8_t ZOE_M8B_get_odometer(uint8_t * buffer, uint32_t timeout)
+{
+	static uint8_t requestUBX_CFG_ODO[8] = {0xB5, 0x62, 0x06, 0x1E, 0x00, 0x00, 0x24, 0x72};
+	ZOE_M8B_send_message(requestUBX_CFG_ODO, 8);
+	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
+	for(uint8_t i = 0; i < 28; i++)
+	{
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
+	}
+	
+	uint8_t checksum = ZOE_M8B_verify_checksum(buffer, 28);
+	
+	if(checksum) return 1;
+	else return 0;
+}
+
+
+/*
+	Reads only the default (always present) block of the message.
+	
+	UBX-NAV-SBAS (20 + 12 * cnt bytes)
+*/
+uint8_t ZOE_M8B_get_SBAS(uint8_t * buffer, uint32_t timeout)
+{
+	static uint8_t requestUBX_NAV_SBAS[8] = {0xB5, 0x62, 0x01, 0x32, 0x00, 0x00, 0x33, 0x9A};
+	ZOE_M8B_send_message(requestUBX_NAV_SBAS, 8);
+	
+	SERCOM_USART_flush_rxbuffer();
+	
+	uint32_t _timeout = timeout;								// set individually for every message, ~26 instructions per 1 timeout
+	
+	for(uint8_t i = 0; i < 18; i++)
+	{
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
+	}
+	
+	// unpredictable length, don't calculate checksum
+	
+	if(buffer[2] == 0x01 && buffer[3] == 0x32) return 1;
 	else return 0;
 }
 
@@ -352,17 +738,18 @@ uint8_t ZOE_M8B_get_dilution_of_precision(uint8_t * buffer)
 	U-blox recommends that receivers are cold started after any change that disables an active GNSS.
 	
 	gnssId	GNSS
-		0		GPS
-		1		SBAS
-		2		Galileo
-		3		BeiDou
-		4		IMES
-		5		QZSS
-		6		GLONASS
+	0		GPS
+	1		SBAS
+	2		Galileo
+	3		BeiDou
+	4		IMES
+	5		QZSS
+	6		GLONASS
 	
 	MODE
 	0	GPS, QZSS and GLONASS (default)
 	1	GPS and QZSS only
+	2	GPS, QZSS and SBAS
 	
 	UBX-CFG-GNSS
 */
@@ -371,28 +758,37 @@ uint8_t ZOE_M8B_set_GNSS_system(uint8_t mode)
 	switch(mode)
 	{
 		case 0:;
-			static uint8_t gnss_default[68] = {0xB5, 0x62, 0x06, 0x3E, 0x3C, 0x00, 0x00, 0x00, 0x20, 0x07, 0x00, 0x08, 0x10, 0x00, 0x01, 0x00,
-											   0x00, 0x01, 0x01, 0x01, 0x03, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x04, 0x08, 0x00, 0x00, 0x00,
-											   0x00, 0x01, 0x03, 0x08, 0x10, 0x00, 0x00, 0x00, 0x00, 0x01, 0x04, 0x00, 0x08, 0x00, 0x00, 0x00,
-											   0x00, 0x01, 0x05, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x01, 0x06, 0x08, 0x0E, 0x00, 0x01, 0x00,
-											   0x00, 0x01, 0x27, 0xA7};
+			static uint8_t gnss_default[68] = {0xb5, 0x62, 0x06, 0x3e, 0x3c, 0x00, 0x00, 0x20, 0x20, 0x07, 0x00, 0x08, 0x10, 0x00, 0x01, 0x00,
+											   0x01, 0x01, 0x01, 0x01, 0x03, 0x00, 0x00, 0x00, 0x01, 0x01, 0x02, 0x04, 0x08, 0x00, 0x00, 0x00,
+											   0x01, 0x01, 0x03, 0x08, 0x10, 0x00, 0x00, 0x00, 0x01, 0x01, 0x04, 0x00, 0x08, 0x00, 0x00, 0x00,
+											   0x01, 0x03, 0x05, 0x00, 0x03, 0x00, 0x01, 0x00, 0x01, 0x05, 0x06, 0x08, 0x0e, 0x00, 0x01, 0x00,
+											   0x01, 0x01, 0x54, 0x03};
 			ZOE_M8B_send_message(gnss_default, 68);
 			break;
 			
 		case 1:;
-			static uint8_t gnss_gps[68] = {0xB5, 0x62, 0x06, 0x3E, 0x3C, 0x00, 0x00, 0x00, 0x20, 0x07, 0x00, 0x08, 0x10, 0x00, 0x01, 0x00,
-										   0x00, 0x01, 0x01, 0x01, 0x03, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x04, 0x08, 0x00, 0x00, 0x00,
-										   0x00, 0x01, 0x03, 0x08, 0x10, 0x00, 0x00, 0x00, 0x00, 0x01, 0x04, 0x00, 0x08, 0x00, 0x00, 0x00,
-										   0x00, 0x01, 0x05, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x01, 0x06, 0x08, 0x0E, 0x00, 0x00, 0x00,
-										   0x00, 0x01, 0x26, 0xA3};
+			static uint8_t gnss_gps[68] = {0xB5, 0x62, 0x06, 0x3E, 0x3C, 0x00, 0x00, 0x20, 0x20, 0x07, 0x00, 0x08, 0x10, 0x00, 0x01, 0x00,
+										   0x01, 0x01, 0x01, 0x01, 0x03, 0x00, 0x00, 0x00, 0x01, 0x01, 0x02, 0x04, 0x08, 0x00, 0x00, 0x00,
+										   0x01, 0x01, 0x03, 0x08, 0x10, 0x00, 0x00, 0x00, 0x01, 0x01, 0x04, 0x00, 0x08, 0x00, 0x00, 0x00,
+										   0x01, 0x03, 0x05, 0x00, 0x03, 0x00, 0x01, 0x00, 0x01, 0x05, 0x06, 0x08, 0x0E, 0x00, 0x00, 0x00,
+										   0x01, 0x01, 0x53, 0xFF};
 			ZOE_M8B_send_message(gnss_gps, 68);
+			break;
+			
+		case 2:;
+			static uint8_t gnss_sbas[68] = {0xB5, 0x62, 0x06, 0x3E, 0x3C, 0x00, 0x00, 0x20, 0x20, 0x07, 0x00, 0x08, 0x10, 0x00, 0x01, 0x00,
+											0x01, 0x01, 0x01, 0x01, 0x03, 0x00, 0x01, 0x00, 0x01, 0x01, 0x02, 0x04, 0x08, 0x00, 0x00, 0x00,
+											0x01, 0x01, 0x03, 0x08, 0x10, 0x00, 0x00, 0x00, 0x01, 0x01, 0x04, 0x00, 0x08, 0x00, 0x00, 0x00,
+											0x01, 0x03, 0x05, 0x00, 0x03, 0x00, 0x01, 0x00, 0x01, 0x05, 0x06, 0x08, 0x0E, 0x00, 0x00, 0x00,
+											0x01, 0x01, 0x54, 0x2B};
+			ZOE_M8B_send_message(gnss_sbas, 68);
 			break;
 			
 		default:
 			return 0;
 	}
 	
-	uint8_t acknack = ZOE_M8B_receive_acknowledge();
+	uint8_t acknack = ZOE_M8B_receive_acknowledge(ACK_TIMEOUT);
 	
 	return acknack;
 }
@@ -455,7 +851,7 @@ uint8_t ZOE_M8B_set_dynamic_model(uint8_t model)
 			return 0;
 	}
 	
-	uint8_t acknack = ZOE_M8B_receive_acknowledge();
+	uint8_t acknack = ZOE_M8B_receive_acknowledge(ACK_TIMEOUT);
 	
 	return acknack;
 }
@@ -501,7 +897,7 @@ uint8_t ZOE_M8B_set_update_rate(uint8_t rate)
 			return 0;
 	}
 	
-	uint8_t acknack = ZOE_M8B_receive_acknowledge();
+	uint8_t acknack = ZOE_M8B_receive_acknowledge(ACK_TIMEOUT);
 	
 	return acknack;
 }
@@ -531,26 +927,26 @@ void ZOE_M8B_set_port(uint8_t mode)
 	switch(mode)
 	{
 		case 0:;
-			static uint8_t slowNMEA[28] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25,
-										   0x00, 0x00, 0x07, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA2, 0xB5};
+			static uint8_t slowNMEA[28] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xC0, 0x08, 0x00, 0x00, 0x80, 0x25,
+										   0x00, 0x00, 0x07, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x92, 0xB5};
 			ZOE_M8B_send_message(slowNMEA, 28);
 			break;
 		
 		case 1:;
-			static uint8_t slowUBX[28] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25,
-										  0x00, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xA9};
+			static uint8_t slowUBX[28] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xC0, 0x08, 0x00, 0x00, 0x80, 0x25,
+										  0x00, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x90, 0xA9};
 			ZOE_M8B_send_message(slowUBX, 28);
 			break;
 			
 		case 2:;
-			static uint8_t fastNMEA[28] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x00, 0xC2,
-										   0x01, 0x00, 0x07, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x7E};
+			static uint8_t fastNMEA[28] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xC0, 0x08, 0x00, 0x00, 0x00, 0xC2,
+										   0x01, 0x00, 0x07, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0xB0, 0x7E};
 			ZOE_M8B_send_message(fastNMEA, 28);
 			break;
 			
 		case 3:;
-			static uint8_t fastUBX[28] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x00, 0xC2,
-										  0x01, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBE, 0x72};
+			static uint8_t fastUBX[28] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xC0, 0x08, 0x00, 0x00, 0x00, 0xC2,
+										  0x01, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xAE, 0x72};
 			ZOE_M8B_send_message(fastUBX, 28);
 			break;
 		
@@ -613,7 +1009,7 @@ uint8_t ZOE_M8B_set_message_rate(uint8_t message)
 			return 0;
 	}
 	
-	uint8_t acknack = ZOE_M8B_receive_acknowledge();
+	uint8_t acknack = ZOE_M8B_receive_acknowledge(ACK_TIMEOUT);
 	
 	return acknack;
 }
@@ -680,7 +1076,7 @@ uint8_t ZOE_M8B_set_power_mode(uint8_t mode)
 			return 0;
 	}
 	
-	uint8_t acknack = ZOE_M8B_receive_acknowledge();
+	uint8_t acknack = ZOE_M8B_receive_acknowledge(ACK_TIMEOUT);
 	
 	return acknack;
 }
@@ -733,7 +1129,7 @@ uint8_t ZOE_M8B_set_power_management(uint8_t mode)
 			return 0;
 	}
 	
-	uint8_t acknack = ZOE_M8B_receive_acknowledge();
+	uint8_t acknack = ZOE_M8B_receive_acknowledge(ACK_TIMEOUT);
 	
 	return acknack;
 }
@@ -764,7 +1160,7 @@ uint8_t ZOE_M8B_power_saving(uint8_t enable)
 		ZOE_M8B_send_message(continuous, 10);
 	}
 	
-	uint8_t acknack = ZOE_M8B_receive_acknowledge();
+	uint8_t acknack = ZOE_M8B_receive_acknowledge(ACK_TIMEOUT);
 	
 	return acknack;
 }
@@ -862,7 +1258,7 @@ uint8_t ZOE_M8B_save_current_configuration(void)
 											0x00, 0x00, 0x01, 0x5B, 0xC9};
 	ZOE_M8B_send_message(saveConfiguration, 21);
 	
-	uint8_t acknack = ZOE_M8B_receive_acknowledge();
+	uint8_t acknack = ZOE_M8B_receive_acknowledge(ACK_TIMEOUT);
 	
 	return acknack;
 }
@@ -901,7 +1297,7 @@ uint8_t ZOE_M8B_AssistNow_Autonomous(uint8_t enable)
 		ZOE_M8B_send_message(ANAdisable, 52);
 	}
 	
-	uint8_t acknack = ZOE_M8B_receive_acknowledge();
+	uint8_t acknack = ZOE_M8B_receive_acknowledge(ACK_TIMEOUT);
 	
 	return acknack;
 }
@@ -932,7 +1328,7 @@ uint8_t ZOE_M8B_odometer(uint8_t enable)
 		ZOE_M8B_send_message(ODOdisable, 28);
 	}
 	
-	uint8_t acknack = ZOE_M8B_receive_acknowledge();
+	uint8_t acknack = ZOE_M8B_receive_acknowledge(ACK_TIMEOUT);
 	
 	return acknack;
 }
@@ -946,7 +1342,7 @@ uint8_t ZOE_M8B_odometer_reset(void)
 	static uint8_t resetodo[8] = {0xB5, 0x62, 0x01, 0x10, 0x00, 0x00, 0x11, 0x34};
 	ZOE_M8B_send_message(resetodo, 8);
 	
-	uint8_t acknack = ZOE_M8B_receive_acknowledge();
+	uint8_t acknack = ZOE_M8B_receive_acknowledge(ACK_TIMEOUT);
 	
 	return acknack;
 }
@@ -972,13 +1368,19 @@ void ZOE_M8B_send_message(uint8_t * message, uint8_t length)
 	
 	Ack/Nak Messages: i.e. Acknowledge or Reject messages to CFG input messages.
 */
-uint8_t ZOE_M8B_receive_acknowledge(void)
+uint8_t ZOE_M8B_receive_acknowledge(uint32_t timeout)
 {
+	SERCOM_USART_flush_rxbuffer();
+	
 	uint8_t buffer[10];
+	
+	uint32_t _timeout = timeout;									// set individually for every message, ~26 instructions per 1 timeout
 	
 	for(uint8_t i = 0; i < 10; i++)
 	{
-		buffer[i] = SERCOM_USART_read_byte();
+		buffer[i] = SERCOM_USART_read_byte(&_timeout);
+		
+		if(!_timeout) return 2;									// times out if first response byte doesn't show up in time
 	}
 	
 	if(buffer[2] == 0x05 && buffer[3] == 0x01) return 1;
@@ -998,6 +1400,8 @@ uint8_t ZOE_M8B_verify_checksum(uint8_t *buffer, uint8_t len)
 		CK_A_comp = CK_A_comp + buffer[i];
 		CK_B_comp = CK_A_comp + CK_B_comp;
 	}
+	
+	if(buffer[len-2] == 0x00 && buffer[len-1] == 0x00) return 0;
 	
 	if(buffer[len-2] == CK_A_comp && buffer[len-1] == CK_B_comp) return 1;
 	else return 0;
@@ -1031,13 +1435,17 @@ uint8_t ZOE_M8B_verify_checksum(uint8_t *buffer, uint8_t len)
 				4: Power Optimized Tracking
 				5: Inactive
 	NUMSV		Number of satellites used in Navigation Solution
-	LON			Longitude
-	LAT			Latitude
-	HMSL		Height above mean sea level
+	LON			Longitude [°]
+	LAT			Latitude [°]
+	HMSL		Height above mean sea level [mm]
+	HACC		Horizontal accuracy estimate [mm]
+	VACC		Vertical accuracy estimate [mm]
+	PDOP		Position DOP [0.01]
 */
 void ZOE_M8B_parse_solution(uint8_t * buffer, uint16_t * year, uint8_t * month, uint8_t * day, uint8_t * hour,
 							uint8_t * min, uint8_t * sec, uint8_t * valid, uint8_t * fixType, uint8_t * gnssFixOK,
-							uint8_t * psmState, uint8_t * numSV, float * lon, float * lat, int32_t * hMSL)
+							uint8_t * psmState, uint8_t * numSV, float * lon, float * lat, int32_t * hMSL,
+							uint32_t * hAcc, uint32_t * vAcc, uint16_t * pDOP)
 {
 	*year = ((uint16_t)buffer[11] << 8) | (uint16_t)buffer[10];
 	*month = buffer[12];
@@ -1055,6 +1463,9 @@ void ZOE_M8B_parse_solution(uint8_t * buffer, uint16_t * year, uint8_t * month, 
 	int32_t _lat = ((int32_t)buffer[37] << 24) | ((int32_t)buffer[36] << 16) | ((int32_t)buffer[35] << 8) | (int32_t)buffer[34];
 	*lat = (float)_lat / 10000000.0;
 	*hMSL = (((int32_t)buffer[45] << 24) | ((int32_t)buffer[44] << 16) | ((int32_t)buffer[43] << 8) | (int32_t)buffer[42]) / 1000;
+	*hAcc = ((uint32_t)buffer[49] << 24) | ((uint32_t)buffer[48] << 16) | ((uint32_t)buffer[47] << 8) | (uint32_t)buffer[46];
+	*vAcc = ((uint32_t)buffer[53] << 24) | ((uint32_t)buffer[52] << 16) | ((uint32_t)buffer[51] << 8) | (uint32_t)buffer[50];
+	*pDOP = ((uint16_t)buffer[83] << 8) | (uint16_t)buffer[82];
 }
 
 
@@ -1127,4 +1538,16 @@ void ZOE_M8B_parse_dilution_of_precision(uint8_t * buffer, uint16_t * gDOP, uint
 	*hDOP = ((uint16_t)buffer[19] << 8) | (uint16_t)buffer[18];
 	*nDOP = ((uint16_t)buffer[21] << 8) | (uint16_t)buffer[20];
 	*eDOP = ((uint16_t)buffer[23] << 8) | (uint16_t)buffer[22];
+}
+
+
+/*
+	
+*/
+void clear_buffer(uint8_t * buffer, uint8_t len)
+{
+	for(uint8_t i = 0; i < len; i++)
+	{
+		buffer[i] = 0x00;
+	}
 }

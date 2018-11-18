@@ -65,6 +65,25 @@
 	AssistNow Autonomous provides aiding information based on previous broadcast satellite ephemeris data
 	downloaded to and stored by the ZOE-M8B receiver. It automatically generates accurate predictions
 	of satellite orbital data that is usable for future GNSS position fixes.
+	
+	BAUD RATE		8 bytes		50 bytes	100 bytes
+		4800		16.7ms		104ms		208ms
+		9600		8.3ms		52ms		104ms
+		19200		4.2ms		26ms		52ms
+		38400		2.1ms		13ms		26ms
+		57600		1.39ms		8.7ms		17.4ms
+		115200		0.69ms		4.3ms		8.7ms
+		230400		0.35ms		2.2ms		4.3ms
+		460800		0.17ms		1.1ms		2.2ms
+	
+	RESPONSE TIMES (at 9600 baud)
+		ZOE_M8B_set_port					65.1ms
+		ZOE_M8B_power_saving				38.0ms
+		ZOE_M8B_set_dynamic_model			65.2ms
+		ZOE_M8B_set_GNSS_system				92.5ms
+		ZOE_M8B_get_dynamic_model			73.8ms
+		ZOE_M8B_save_current_configuration	38.2ms
+		ZOE_M8B_get_solution				periodic
 */
 
 
@@ -75,14 +94,28 @@
 #include "stdint.h"
 
 
+#define ACK_TIMEOUT 80000										// ~26 clock cycles per 1 timeout, ~0.52s with 4MHz MCLK
+
+
 // Functions
-uint8_t ZOE_M8B_get_version(uint8_t * buffer);
-uint8_t ZOE_M8B_get_solution(uint8_t * buffer);
-uint8_t ZOE_M8B_get_NMEA_message(uint8_t message, uint8_t * buffer);
-uint8_t ZOE_M8B_get_dynamic_model(uint8_t * buffer);
-uint8_t ZOE_M8B_get_ANA_status(uint8_t * buffer);
-uint8_t ZOE_M8B_get_odometer_distance(uint8_t * buffer);
-uint8_t ZOE_M8B_get_dilution_of_precision(uint8_t * buffer);
+uint8_t ZOE_M8B_get_version(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_solution(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_NMEA_message(uint8_t message, uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_dynamic_model(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_ANA_status(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_odometer_distance(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_dilution_of_precision(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_GPS_time_solution(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_navigation_status(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_GNSS_system(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_update_rate(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_port(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_power_mode(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_power_management(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_power_saving(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_AssistNow_Autonomous(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_odometer(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_SBAS(uint8_t * buffer, uint32_t timeout);
 
 uint8_t ZOE_M8B_set_GNSS_system(uint8_t mode);
 uint8_t ZOE_M8B_set_dynamic_model(uint8_t model);
@@ -103,17 +136,20 @@ uint8_t ZOE_M8B_odometer(uint8_t enable);
 uint8_t ZOE_M8B_odometer_reset(void);
 
 void ZOE_M8B_send_message(uint8_t * message, uint8_t length);
-uint8_t ZOE_M8B_receive_acknowledge(void);
+uint8_t ZOE_M8B_receive_acknowledge(uint32_t timeout);
 uint8_t ZOE_M8B_verify_checksum(uint8_t *buffer, uint8_t len);
 
 void ZOE_M8B_parse_solution(uint8_t * buffer, uint16_t * year, uint8_t * month, uint8_t * day, uint8_t * hour,
 							uint8_t * min, uint8_t * sec, uint8_t * valid, uint8_t * fixType, uint8_t * gnssFixOK,
-							uint8_t * psmState, uint8_t * numSV, float * lon, float * lat, int32_t * hMLS);
+							uint8_t * psmState, uint8_t * numSV, float * lon, float * lat, int32_t * hMLS,
+							uint32_t * hAcc, uint32_t * vAcc, uint16_t * pDOP);
 void ZOE_M8B_parse_dynamic_model(uint8_t * buffer, uint8_t * model);
 void ZOE_M8B_parse_ANA_status(uint8_t * buffer, uint8_t * status);
 void ZOE_M8B_parse_odometer_distance(uint8_t * buffer, uint32_t * distance, uint32_t * totalDistance);
 void ZOE_M8B_parse_dilution_of_precision(uint8_t * buffer, uint16_t * gDOP, uint16_t * pDOP, uint16_t * tDOP,
 										 uint16_t * vDOP, uint16_t * hDOP, uint16_t * nDOP, uint16_t * eDOP);
+										 
+void clear_buffer(uint8_t * buffer, uint8_t len);
 
 
 #endif // L21_ZOE_M8B_H_

@@ -90,14 +90,22 @@ void SERCOM_USART_write_byte(uint8_t data)
 /*
 	
 */
-uint8_t SERCOM_USART_read_byte(void)
+uint8_t SERCOM_USART_read_byte(uint32_t * timeout)
 {
 	uint8_t data;
+	uint32_t _timeout = *timeout;
 	
-	while(!(SERCOM3->USART.INTFLAG.bit.RXC));					// This flag is set when there are unread data in DATA.
+	while(!(SERCOM3->USART.INTFLAG.bit.RXC) && _timeout) _timeout--;	// This flag is set when there are unread data in DATA.
+	
+	if(!_timeout)												// byte reception timed out
+	{
+		*timeout = 0;											// inform about timing out
+		return 0;
+	}
+	
 	data = SERCOM3->USART.DATA.reg;								// Reading DATA will return the contents of the Receive Data register.
 	
-	return data;
+	return data;												// return received byte
 }
 
 

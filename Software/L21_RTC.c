@@ -35,10 +35,16 @@
 		0x2		OSC1K		1.024kHz from 32KHz internal oscillator
 		0x3		OSC32K		32.768kHz from 32KHz internal oscillator
 		0x4		XOSC1K		1.024kHz from 32KHz external oscillator
-		0x5		XOSC32K		32.768kHz from 32KHz external crystal oscillator	
+		0x5		XOSC32K		32.768kHz from 32KHz external crystal oscillator
+	
+	The RTC will be reset only at power-on (POR) or by setting the Software Reset bit in the Control A
+	register (CTRLA.SWRST=1).
 */
 void RTC_mode0_enable(uint8_t prescaler, uint32_t comp)
 {
+	RTC->MODE0.CTRLA.bit.ENABLE = 0;							// disable RTC
+	while(RTC->MODE0.SYNCBUSY.bit.ENABLE);						// SYNCBUSY.ENABLE will be cleared when synchronization is complete
+	
 	OSC32KCTRL->RTCCTRL.bit.RTCSEL = 0x05;
 	
 	if(prescaler > 0xB) RTC->MODE0.CTRLA.bit.PRESCALER = 0;
@@ -86,6 +92,7 @@ void RTC_mode0_reset(void)
 */
 void RTC_mode0_update_compare(uint32_t comp)
 {
+	while(RTC->MODE0.SYNCBUSY.bit.COUNTSYNC);					// wait while write synchronization for CTRLA.COUNTSYNC bit is ongoing
 	uint32_t count = RTC->MODE0.COUNT.reg;						// get the current RTC COUNT value
 	
 	RTC->MODE0.COMP[0].bit.COMP = count + comp;					// update next compare match
@@ -94,10 +101,21 @@ void RTC_mode0_update_compare(uint32_t comp)
 
 
 /*
+	Set the value of the count register.
+*/
+void RTC_mode0_set_count(uint32_t count)
+{
+	RTC->MODE0.COUNT.bit.COUNT = count;							// set count register to value
+	while(RTC->MODE0.SYNCBUSY.bit.COUNT);						// wait while write synchronization for COUNT register is ongoing
+}
+
+
+/*
 	Returns the current value of the RTC's COUNT register.
 */
 uint32_t RTC_get_current_count(void)
 {
+	while(RTC->MODE0.SYNCBUSY.bit.COUNTSYNC);					// wait while write synchronization for CTRLA.COUNTSYNC bit is ongoing
 	uint32_t count = RTC->MODE0.COUNT.reg;						// get the current RTC COUNT value
 	
 	return count;

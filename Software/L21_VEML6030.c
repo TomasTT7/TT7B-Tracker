@@ -104,7 +104,7 @@ uint16_t VEML6030_read_reg(uint8_t cmd)
 		{
 			data = SERCOM_I2C_receive_byte(0);					// receive data low byte
 			SERCOM_I2C_receive_byte(1);
-			data = (uint16_t)SERCOM_I2C_end_reception() << 8;	// receive data high byte
+			data |= (uint16_t)SERCOM_I2C_end_reception() << 8;	// receive data high byte
 		}
 	}
 	

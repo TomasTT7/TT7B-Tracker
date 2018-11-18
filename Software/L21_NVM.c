@@ -19,7 +19,7 @@
 		Device			Flash size		Number of pages		Page size		Last Row Start		Last Page Start		Last Byte
 		SAML21x18		256kB			4096 				64B				0x0003FF00			0x0003FFC0			0x0003FFFF
 		SAML21x17		128kB			2048 				64B				0x0001FF00			0x0001FFC0			0x0001FFFF
-		SAML21x16		64kB			1024 				64B				0x0000FF00			0x0000FFCO			0x0000FFFF
+		SAML21x16		64kB			1024 				64B				0x0000FF00			0x0000FFC0			0x0000FFFF
 		SAML21E15		32kB			512 				64B				0x00007F00			0x00007FC0			0x00007FFF
 	
 	RWW SECTION
@@ -73,6 +73,7 @@ void NVM_flash_read(uint8_t * buffer, uint16_t * address, uint32_t num)
 
 /*
 	Row erases must be performed by issuing commands through the NVM Controller.
+	Row Erase:	6ms
 	
 	ADDRESS
 		Any address within the ROW can be used.
@@ -89,6 +90,7 @@ void NVM_flash_erase_row(uint32_t address)
 /*
 	Manual page writes must be performed by issuing commands through the NVM Controller.
 	The NVM Controller requires that an erase must be done before programming.
+	Page Write:	2.5ms
 	
 	The page buffer is at address zero, is write only, and must only be written using 16 or 32-bit accesses.
 */

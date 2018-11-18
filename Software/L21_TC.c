@@ -15,25 +15,25 @@
 /*
 	OSCILLATOR: FDPLL96, REFCLK = XOSC32K
 		Fck = Fckr * (LDR + 1 + LDRFRAC / 16) * (1 / 2^PRESC)
-		65,894,400Hz = 32,768Hz * (2009 + 1 + 15/16) * (1 / 2^0)
+		50,688,000Hz = 32,768Hz * (1545 + 1 + 14/16) * (1 / 2^0)
 	
 	MCLK: GCLK[0], DIV = 4, SRC = FDPLL96
-		16,473,600Hz = 65,894,400Hz / 4
+		25,344,000Hz = 50,688,000Hz / 2
 	
 	DAC: GCLK[2], DIV = 16, SRC = FDPLL96
-		4,118,400Hz = 65,894,400Hz / 16
+		4,224,000Hz = 50,688,000Hz / 12
 	
 	TC0: MCLK, COMPARE = 858
-		19,200Hz = 16,473,600Hz / 858
+		38,400Hz = 25,344,000Hz / 660
 	
 	TC4: MCLK, COMPARE = 468
-		35,200Hz = 16,473,600Hz / 468
+		70,400Hz = 25,344,000Hz / 360
 	
 	1200Hz TONE: TABLE = 16 byte
-		1200Hz = 19,200Hz / 16
+		1200Hz = 38,400Hz / 32
 	
 	2200Hz TONE: TABLE = 16 byte
-		2200hz = 35,200Hz / 16
+		2200hz = 70,400Hz / 32
 	
 	SINE WAVE
 		Necessary to adjust voltage levels in the 1200Hz tone due to PRE-EMPHASIS.
@@ -42,7 +42,7 @@
 		SINE_1200HZ: RANGE = 0.41V-1.4V
 	
 	SI5351B
-		OFFSET = Hz
+		OFFSET = 3900Hz
 */
 volatile static uint8_t tone_switch = 1;						// controls switching between 1200Hz (1) and 2200Hz (0) tones
 volatile static uint8_t _n = 0;									// iterates through sine wave tables
@@ -190,6 +190,15 @@ void TC0_buffer_add_bit(uint8_t bit, uint8_t reset)
 	uint8_t _bit = (buffer_bits - 1) % 8;
 	
 	buffer[_byte] |= (bit << _bit);
+}
+
+
+/*
+	Must be called at the beginning before filling buffer with TC0_buffer_add_bit().
+*/
+void TC0_buffer_clear(void)
+{
+	for(uint8_t i = 0; i < 150; i++) buffer[i] = 0x00;
 }
 
 

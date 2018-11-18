@@ -15,6 +15,7 @@ void RTC_mode0_enable(uint8_t prescaler, uint32_t comp);
 void RTC_mode0_disable(void);
 void RTC_mode0_reset(void);
 void RTC_mode0_update_compare(uint32_t comp);
+void RTC_mode0_set_count(uint32_t count);
 uint32_t RTC_get_current_count(void);
 void RTC_Handler(void);
 

@@ -19,7 +19,7 @@ void SERCOM_USART_enable(uint32_t mclk, uint32_t baud);
 void SERCOM_USART_disable(void);
 void SERCOM_USART_reset(void);
 void SERCOM_USART_write_byte(uint8_t data);
-uint8_t SERCOM_USART_read_byte(void);
+uint8_t SERCOM_USART_read_byte(uint32_t * timeout);
 void SERCOM_USART_flush_rxbuffer(void);
 
 

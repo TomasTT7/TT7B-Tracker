@@ -1,5 +1,5 @@
 /*
-	APRS PACKET SIZE
+	APRS PACKET SIZE [byte]
 		Flags			?
 		Destination		7
 		Source			7
@@ -14,6 +14,7 @@
 
 #include "sam.h"
 #include "L21_APRS.h"
+#include "L21_NVM.h"
 #include "L21_TC.h"
 #include "math.h"
 
@@ -25,42 +26,44 @@
 /*
 	STRUCTURE:
 		
-		!/5LD\S*,yON2W?[%)Bxe`7,.>B!1d3_!?K+5MHWS(KY"`8S(pNxj?[%)Bxe`$V.>B!1d2V
+		!/5LD\S*,yON2WYm%=,)ZiLx,f:-D33ZM0!<QU5N^JS%<z!(Z/'T$r7U@#]KRj1F(!9T,wQ7,8Z
 		
-		!		Data Type Identifier
-		/		Symbol Table Identifier
-		5LD\	Latitude
-		S*,y	Longitude
-		O		Symbol Code (Balloon)
-		N2		Altitude
-		W		Compression Type Identifier
+		!									Data Type Identifier
+		/									Symbol Table Identifier
+		5LD\		49.49148°				Latitude
+		S*,y		18.22311°				Longitude
+		O									Symbol Code (Balloon)
+		N2			1127m					Altitude (coarse)
+		W									Compression Type Identifier
 		
-		?[		Temperature MCU
-		%)		Temperature THERMISTOR_1
-		Bx		Temperature THERMISTOR_2
-		e`		Temperature MS5607_1
-		7,		Temperature MS5607_2
-		.>B		Pressure MS5607_1
-		!1d		Pressure MS5607_2
-		3_		Battery Voltage
-		!?K+	Altitude (precise: 0-99m), Satellites, Active Time, Last Reset
+		Ym			23.44°C					Temperature MCU
+		%=			23.74°C					Temperature THERMISTOR_1
+		,)			0.01°C					Temperature THERMISTOR_2
+		Zi			25.18°C					Temperature MS5607_1
+		Lx			0.00°C					Temperature MS5607_2
+		,f:			97395Pa					Pressure MS5607_1
+		-D3			102575Pa				Pressure MS5607_2
+		3Z			1.512V					Battery Voltage
+		M0			22.10lux				Ambient Light
+		!<QU		2m, 4, 0.1s, POR		Altitude (offset: 0-99m), Satellites, Active Time, Last Reset
 		
-		5MHW	Backlog: Latitude
-		S(KY	Backlog: Longitude
-		"`8S	Backlog: Altitude (precise: 0-50,000m)
-		(pNxj	Backlog: Year, Month, Day, Hour, Minute, Active Time
-		?[		Backlog: Temperature MCU
-		%)		Backlog: Temperature THERMISTOR_1
-		Bx		Backlog: Temperature THERMISTOR_2
-		e`		Backlog: Temperature MS5607_1
-		$V		Backlog: Temperature MS5607_2
-		.>B		Backlog: Pressure MS5607_1
-		!1d		Backlog: Pressure MS5607_2
-		2V		Backlog: Battery Voltage
+		5N^J		49.44184°				Backlog: Latitude
+		S%<z		18.01337°				Backlog: Longitude
+		!(Z/		619m, 5, NONE			Backlog: Altitude (precise: 0-50,000m), Satellites, Last Reset
+		'T$r7		20181103 10:34, 12.3s	Backlog: Year, Month, Day, Hour, Minute, Active Time
+		U@			15.26°C					Backlog: Temperature MCU
+		#]			35.99°C					Backlog: Temperature THERMISTOR_1
+		KR			-62.65°C				Backlog: Temperature THERMISTOR_2
+		j1			53.18°C					Backlog: Temperature MS5607_1
+		F(			-12.52°C				Backlog: Temperature MS5607_2
+		!9T			2235Pa					Backlog: Pressure MS5607_1
+		,wQ			98965Pa					Backlog: Pressure MS5607_2
+		7,			1.795V					Backlog: Battery Voltage
+		8Z			0.5279lux				Backlog: Ambient Light
 */
-uint8_t APRS_packet(uint8_t * buffer, uint8_t * callsign, uint8_t ssid, float lat, float lon, uint16_t alt, uint16_t temp_mcu,
+uint8_t APRS_packet(uint8_t * buffer, uint8_t * callsign, uint8_t ssid, float lat, float lon, uint16_t alt, float temp_mcu,
 					uint16_t temp_th1, uint16_t temp_th2, float temp_ms1, float temp_ms2, uint32_t pres_ms1, uint32_t pres_ms2,
-					uint16_t battV, uint8_t sats, uint16_t time, uint8_t rcause)
+					uint16_t battV, float light, uint8_t sats, uint16_t time, uint8_t rcause, uint16_t * backlog_index, uint8_t nogps)
 {
 	uint8_t n = 0;
 	
@@ -98,38 +101,65 @@ uint8_t APRS_packet(uint8_t * buffer, uint8_t * callsign, uint8_t ssid, float la
 	/* Protocol ID */
 	buffer[n++] = 0xF0;
 	
-	/* Information Field */
-	buffer[n++] = '!';											// Data Type Identifier
-	buffer[n++] = '/';											// Symbol Table Identifier
+	if(!nogps)
+	{
+		/* Information Field */
+		buffer[n++] = '!';										// Data Type Identifier
+		buffer[n++] = '/';										// Symbol Table Identifier
 	
-	uint32_t latitude = (90.0 - lat) * 380926.0;
-	uint32_t longitude = (180.0 + lon) * 190463.0;
-	uint16_t altitude = log((float)alt * 3.28084) / log(1.002);
+		uint32_t latitude = (90.0 - lat) * 380926.0;
+		uint32_t longitude = (180.0 + lon) * 190463.0;
+		uint16_t altitude = log10((float)alt * 3.28084) / log10(1.002);
 	
-	n = Base91_encode_u32(latitude, buffer, n);					// Latitude
-	n = Base91_encode_u32(longitude, buffer, n);				// Longitude
-	buffer[n++] = 'O';											// Symbol Code (Balloon)
-	n = Base91_encode_u16(altitude, buffer, n);					// Altitude (coarse)
-	buffer[n++] = 'W';											// Compression Type Identifier (0b00110110)
+		n = Base91_encode_u32(latitude, buffer, n);				// Latitude
+		n = Base91_encode_u32(longitude, buffer, n);			// Longitude
+		buffer[n++] = 'O';										// Symbol Code (Balloon)
+		n = Base91_encode_u16(altitude, buffer, n);				// Altitude (coarse)
+		buffer[n++] = 'W';										// Compression Type Identifier (0b00110110)
+	}
+	else
+	{
+		/* Information Field */
+		buffer[n++] = '!';										// Data Type Identifier
+		
+		uint8_t empty_coords[] = "0000.00N\\00000.00W.";
+		for(uint8_t i = 0; i < 19; i++) buffer[n++] = empty_coords[i];
+	}
 	
-	n = Base91_encode_u16(temp_mcu, buffer, n);					// Temperature MCU
-	n = Base91_encode_u16(temp_th1, buffer, n);					// Temperature THERMISTOR_1
-	n = Base91_encode_u16(temp_th2, buffer, n);					// Temperature THERMISTOR_2
-	
+	temp_mcu = temp_mcu * 50.0 + 4000.0;
 	temp_ms1 = temp_ms1 * 50.0 + 4000.0;
 	temp_ms2 = temp_ms2 * 50.0 + 4000.0;
 	
+	uint16_t amb_light = APRS_ambient_light(light);
+	
+	n = Base91_encode_u16((uint16_t)temp_mcu, buffer, n);		// Temperature MCU
+	n = Base91_encode_u16(temp_th1, buffer, n);					// Temperature THERMISTOR_1
+	n = Base91_encode_u16(temp_th2, buffer, n);					// Temperature THERMISTOR_2
 	n = Base91_encode_u16((uint16_t)temp_ms1, buffer, n);		// Temperature MS5607_1
 	n = Base91_encode_u16((uint16_t)temp_ms2, buffer, n);		// Temperature MS5607_2
 	n = Base91_encode_u24(pres_ms1, buffer, n);					// Pressure MS5607_1
 	n = Base91_encode_u24(pres_ms2, buffer, n);					// Pressure MS5607_2
 	n = Base91_encode_u16(battV, buffer, n);					// Battery Voltage
+	n = Base91_encode_u16(amb_light, buffer, n);				// Ambient Light
 	
 	uint8_t reset = APRS_reset_source(rcause);
-	uint8_t alt_precise = APRS_altitude_precise(alt);
-	uint32_t data1 = APRS_data_block_1(alt_precise, sats, time, reset);
+	uint8_t alt_offset = APRS_altitude_offset(alt);
+	uint32_t data1 = APRS_data_block_1(alt_offset, sats, time, reset);
 	
-	n = Base91_encode_u32(data1, buffer, n);					// Altitude (precise), Satellites, Active Time, Last Reset
+	n = Base91_encode_u32(data1, buffer, n);					// Altitude (offset), Satellites, Active Time, Last Reset
+	
+	/* Backlog */
+	uint8_t backlog_buff[37];
+	
+	*backlog_index = (*backlog_index + 1) % 512;
+	uint16_t index = Van_Der_Corput_Sequence(*backlog_index, 9);
+	
+	APRS_backlog_get(backlog_buff, 37, index);
+	
+	if(backlog_buff[0] >= 33 && backlog_buff[0] <= 125)			// if not backlog probably not stored yet, skip it this time
+	{
+		for(uint8_t i = 0; i < 37; i++) buffer[n++] = backlog_buff[i];
+	}
 	
 	/* Frame Check Sequence */
 	uint16_t crc = 0xFFFF;
@@ -151,25 +181,28 @@ uint8_t APRS_packet(uint8_t * buffer, uint8_t * callsign, uint8_t ssid, float la
 /*
 	STRUCTURE:
 	
-		5MHWS(KY"`8S(pNxj?[%)Bxe`$V.>B!1d2V
+		5N^JS%<z!(Z/'T$r7U@#]KRj1F(!9T,wQ7,8Z
 	
-		5MHW	Latitude
-		S(KY	Longitude
-		"`8S	Altitude (precise: 0-50,000m)
-		(pNxj	Year, Month, Day, Hour, Minute, Active Time
-		?[		Temperature MCU
-		%)		Temperature THERMISTOR_1
-		Bx		Temperature THERMISTOR_2
-		e`		Temperature MS5607_1
-		$V		Temperature MS5607_2
-		.>B		Pressure MS5607_1
-		!1d		Pressure MS5607_2
-		2V		Battery Voltage
+		5N^J		49.44184°				Backlog: Latitude
+		S%<z		18.01337°				Backlog: Longitude
+		!(Z/		619m, 5, NONE			Backlog: Altitude (precise: 0-50,000m), Satellites, Last Reset
+		'T$r7		20181103 10:34, 12.3s	Backlog: Year, Month, Day, Hour, Minute, Active Time
+		U@			15.26°C					Backlog: Temperature MCU
+		#]			35.99°C					Backlog: Temperature THERMISTOR_1
+		KR			-62.65°C				Backlog: Temperature THERMISTOR_2
+		j1			53.18°C					Backlog: Temperature MS5607_1
+		F(			-12.52°C				Backlog: Temperature MS5607_2
+		!9T			2235Pa					Backlog: Pressure MS5607_1
+		,wQ			98965Pa					Backlog: Pressure MS5607_2
+		7,			1.795V					Backlog: Battery Voltage
+		8Z			0.5279lux				Backlog: Ambient Light
+	
+	BACKLOG:	37 bytes
 */
-void APRS_backlog_encode(uint8_t * buffer, float lat, float lon, uint16_t alt, uint16_t temp_mcu, uint16_t temp_th1,
+void APRS_backlog_encode(uint8_t * buffer, float lat, float lon, uint16_t alt, float temp_mcu, uint16_t temp_th1,
 						 uint16_t temp_th2, float temp_ms1, float temp_ms2, uint32_t pres_ms1, uint32_t pres_ms2,
 						 uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint16_t battV,
-						 uint8_t sats, uint16_t time, uint8_t rcause)
+						 float light, uint8_t sats, uint16_t time, uint8_t rcause)
 {
 	uint8_t n = 0;
 	
@@ -184,18 +217,90 @@ void APRS_backlog_encode(uint8_t * buffer, float lat, float lon, uint16_t alt, u
 	n = Base91_encode_u32(longitude, buffer, n);				// Longitude
 	n = Base91_encode_u32(data2, buffer, n);					// Data Block 2
 	n = Base91_encode_u40(data3, buffer, n);					// Data Block 3
-	n = Base91_encode_u16(temp_mcu, buffer, n);					// Temperature MCU
-	n = Base91_encode_u16(temp_th1, buffer, n);					// Temperature THERMISTOR_1
-	n = Base91_encode_u16(temp_th2, buffer, n);					// Temperature THERMISTOR_2
 	
+	temp_mcu = temp_mcu * 50.0 + 4000.0;
 	temp_ms1 = temp_ms1 * 50.0 + 4000.0;
 	temp_ms2 = temp_ms2 * 50.0 + 4000.0;
 	
+	uint16_t amb_light = APRS_ambient_light(light);
+	
+	n = Base91_encode_u16((uint16_t)temp_mcu, buffer, n);		// Temperature MCU
+	n = Base91_encode_u16(temp_th1, buffer, n);					// Temperature THERMISTOR_1
+	n = Base91_encode_u16(temp_th2, buffer, n);					// Temperature THERMISTOR_2
 	n = Base91_encode_u16((uint16_t)temp_ms1, buffer, n);		// Temperature MS5607_1
 	n = Base91_encode_u16((uint16_t)temp_ms2, buffer, n);		// Temperature MS5607_2
 	n = Base91_encode_u24(pres_ms1, buffer, n);					// Pressure MS5607_1
 	n = Base91_encode_u24(pres_ms2, buffer, n);					// Pressure MS5607_2
 	n = Base91_encode_u16(battV, buffer, n);					// Battery Voltage
+	n = Base91_encode_u16(amb_light, buffer, n);				// Ambient Light
+}
+
+
+/*
+	Backlog Size:			512 pages
+	Storing Period:			20 minutes
+	Backlogs per day:		72
+	Backlog Depth:			7.1 days
+	Transmission Period:	1 minute
+	Time to transmit all:	8.5 hours
+	
+	Row Erase instruction erases 4 pages.
+	Time to fill row:		60 minutes
+	
+	One row/page used to store a pointer to the oldest backlog. Written with every new log.
+	Cycling Endurance:		25,000 (write & erase)
+	Reliability:			347.2 days
+	
+	SAML21E17 (128kB NVM, 2048 pages, 64 bytes/page)
+	Pointer Address:		98,048		(0x00017F00)	page 1532
+	Backlog Start Address:	98,304		(0x00018000)	page 1536
+	Backlog Last Address:	131,008		(0x0001FFC0)	page 2047
+	
+	LEN		maximum 64 bytes
+*/
+void APRS_backlog_store(uint8_t * buffer, uint8_t len)
+{
+	uint8_t _point[4];
+	uint32_t _pointer = 0;
+	
+	/* Get Pointer */
+	NVM_flash_read(_point, (uint16_t *) (98048), 4);			// read pointer to oldest backlog
+	
+	_pointer = ((uint32_t)_point[0] << 24) | ((uint32_t)_point[1] << 16) | ((uint32_t)_point[2] << 8) | (uint32_t)_point[3];
+	
+	if(_pointer < 98304 || _pointer > 131008) _pointer = 98304;	// by default start at first backlog address
+	
+	/* Write Backlog Data */
+	if((_pointer % 256) == 0) NVM_flash_erase_row(_pointer);	// erase row if pointing at first page in row	
+	NVM_flash_write(buffer, _pointer, len);						// write LEN bytes starting at _POINTER
+	
+	/* Update Pointer */
+	_pointer = _pointer + 64;
+	if(_pointer > 131008) _pointer = 98304;
+	
+	_point[0] = (uint8_t)(_pointer >> 24);
+	_point[1] = (uint8_t)(_pointer >> 16);
+	_point[2] = (uint8_t)(_pointer >> 8);
+	_point[3] = (uint8_t)_pointer;
+	
+	NVM_flash_erase_row(98048);									// erase row where pointer is stored
+	NVM_flash_write(_point, 98048, 4);							// write new pointer
+}
+
+
+/*
+	Backlog Size:			512 pages
+	
+	SAML21E17 (128kB NVM, 2048 pages, 64 bytes/page)
+	Pointer Address:		98,048		(0x00017F00)
+	Backlog Start Address:	98,304		(0x00018000)
+	Backlog Last Address:	131,008		(0x0001FFC0)
+	
+	N	index of the backlog
+*/
+void APRS_backlog_get(uint8_t * buffer, uint8_t len, uint16_t n)
+{
+	NVM_flash_read(buffer, (uint16_t *) (98304 + n * 64), len);
 }
 
 
@@ -214,6 +319,8 @@ void APRS_backlog_encode(uint8_t * buffer, float lat, float lon, uint16_t alt, u
 void APRS_prepare_bitstream(uint8_t * data, uint8_t len)
 {
 	uint8_t series = 0;											// keeps track of successive '1's
+	
+	TC0_buffer_clear();											// buffer must be zeroed first
 	
 	for(uint16_t i = 0; i < len; i++)
 	{
@@ -287,12 +394,14 @@ void APRS_prepare_bitstream(uint8_t * data, uint8_t len)
 		64		34484.6		68.97
 		65		41360.7		82.72
 		66		49607.9		99.22
+		
+	For input ALT between 0 and 50,000, the return value is an integer offset between 1 and 99m.
 */
-uint8_t APRS_altitude_precise(uint16_t alt)
+uint8_t APRS_altitude_offset(uint16_t alt)
 {
-	uint16_t altitude = log((float)alt * 3.28084) / log(1.002);
+	uint16_t altitude = log10((float)alt * 3.28084) / log10(1.002);
 	
-	altitude = (uint16_t)(powf(10.0, (float)altitude * 0.00086772) * 0.3048);
+	altitude = (uint16_t)(powf(10.0, (float)altitude * log10(1.002)) * 0.3048);
 	
 	return alt - altitude;
 }
@@ -339,7 +448,34 @@ uint8_t APRS_reset_source(uint8_t rcause)
 
 
 /*
-	Altitude precise	0-99	[m]
+	Prepares light sensor reading for two char Base91 encoding.
+	
+		input min:		0.0072 lux
+		input max:		110,083 lux
+		
+		output min:		0
+		output max:		8280
+	
+	Due to the encoding, resolution of a decoded LUX value decreases with higher values.
+	
+		VALUE			OUTPUT		RESOLUTION
+		1.804 lux		2765		0.0036 lux
+		501.89 lux		5582		1.002 lux
+		110,083 lux		8280		219.73 lux
+*/
+uint16_t APRS_ambient_light(float light)
+{
+	if(light < 0.0072) return 0;
+	if(light > 110083.0) return 8280;
+	
+	uint16_t result = (uint16_t)(log(light * 139.0) / log(1.002));
+	
+	return result;
+}
+
+
+/*
+	Altitude offset		0-99	[m]
 	Satellites			0-16	[n]
 	Active time			0-999	[0.1s]
 	Last Reset			0-5		[NONE, POR, BOD12, BOD33, WDT, SYS]
@@ -390,6 +526,28 @@ uint64_t APRS_data_block_3(uint16_t year, uint8_t month, uint8_t day, uint8_t ho
 	data = ((((uint64_t)((year - 2018) * 12 + (month - 1)) * 31 + (uint64_t)(day - 1)) * 24 + (uint64_t)hour) * 60 + (uint64_t)minute) * 1000 + (uint64_t)time;
 	
 	return data;
+}
+
+
+/*
+	BITS	IN					OUT
+	2		0,1,2,3				0,2,1,3
+	3		0,1..6,7			0,4,2,6,1,5,3,7
+	4		0,1..14,15			0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15
+	5		0,1..30,31			0,16,8,24,4,20,12,28,2,18,10,26,6,22,14,30,1,17,9,25,5,21,13,29,3,19,11,27,7,23,15,31
+	..
+	16		0,1..65534,65535	...
+*/
+uint16_t Van_Der_Corput_Sequence(uint16_t in, uint8_t bits)
+{
+	uint16_t out = 0;
+	
+	for(uint8_t i = bits; i; i--)
+	{
+	    if(in & (1 << (i-1))) out |= (1 << (bits-i));
+	}
+	
+	return out;
 }
 
 
