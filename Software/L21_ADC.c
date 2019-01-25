@@ -275,6 +275,8 @@ uint32_t ADC_battery_voltage(uint16_t adc_result, uint8_t bit)
 */
 float ADC_temperature_thermistor(uint16_t adc_result)
 {
+	if(adc_result == 0 || adc_result >= 4095) return 0.0;
+	
 	float V_in = (float)VDDANA_ADC / 1000.0;
 	float a = 0.00128424;
 	float b = 0.00023629;
@@ -289,8 +291,8 @@ float ADC_temperature_thermistor(uint16_t adc_result)
 
 
 /*
-	Temperature sensor slope		2.24mV/°C
-	Variation over VDDANA voltage	1.1mV/V
+	Temperature sensor slope		2.24mV/°C (typical)
+	Variation over VDDANA voltage	1.1mV/V (typical)
 	
 	DATASHEET CONFIGURATION FOR TEMPERATURE MEASUREMENTS
 		Supply voltages					VDDIN = VDDIO = VDDANA = 3.3V

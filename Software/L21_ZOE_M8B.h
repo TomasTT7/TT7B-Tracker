@@ -116,6 +116,7 @@ uint8_t ZOE_M8B_get_power_saving(uint8_t * buffer, uint32_t timeout);
 uint8_t ZOE_M8B_get_AssistNow_Autonomous(uint8_t * buffer, uint32_t timeout);
 uint8_t ZOE_M8B_get_odometer(uint8_t * buffer, uint32_t timeout);
 uint8_t ZOE_M8B_get_SBAS(uint8_t * buffer, uint32_t timeout);
+uint8_t ZOE_M8B_get_satellites(uint8_t * buffer, uint32_t timeout, uint8_t * length);
 
 uint8_t ZOE_M8B_set_GNSS_system(uint8_t mode);
 uint8_t ZOE_M8B_set_dynamic_model(uint8_t model);
@@ -148,7 +149,9 @@ void ZOE_M8B_parse_ANA_status(uint8_t * buffer, uint8_t * status);
 void ZOE_M8B_parse_odometer_distance(uint8_t * buffer, uint32_t * distance, uint32_t * totalDistance);
 void ZOE_M8B_parse_dilution_of_precision(uint8_t * buffer, uint16_t * gDOP, uint16_t * pDOP, uint16_t * tDOP,
 										 uint16_t * vDOP, uint16_t * hDOP, uint16_t * nDOP, uint16_t * eDOP);
-										 
+void ZOE_M8B_parse_satellites(uint8_t * buffer, uint8_t len, uint8_t * sats, uint8_t * sig1_10, uint8_t * sig11_20,
+							  uint8_t * sig21_30, uint8_t * sig31_40, uint8_t * sig41);
+
 void clear_buffer(uint8_t * buffer, uint8_t len);
 
 

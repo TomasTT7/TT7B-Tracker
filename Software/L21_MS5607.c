@@ -283,12 +283,13 @@ void MS5607_calculate_results(uint8_t sensor, uint32_t raw_pres, uint32_t raw_te
 	OFF = (int64_t)_C[2] * 131072 + ((int64_t)_C[4] * dT) / 64;
 	SENS = (int64_t)_C[1] * 65536 + ((int64_t)_C[3] * dT) / 128;
 	TEMP = 2000 + dT * (int64_t)_C[6] / 8388608;
+	TEMP = TEMP + (int64_t)(TEMP_ERROR_VOLT * 100.0);			// add fixed offset due to supply voltage
 	
-	if(TEMP > 2000)												// for cases where: temperature > 20.00°C
+	if(TEMP >= 2000)											// for cases where: temperature > 20.00°C
 	{
 		P = ((int64_t)raw_pres * SENS / 2097152 - OFF) / 32768;
 		
-		*pressure = (float)P;									// [Pa]
+		*pressure = (float)P + PRES_ERROR_VOLT;					// [Pa]
 		*temperature = (float)TEMP / 100.0;						// [°C]
 	}
 	else														// for cases where: 20.00°C >= temperature > -15.00°C
@@ -310,7 +311,7 @@ void MS5607_calculate_results(uint8_t sensor, uint32_t raw_pres, uint32_t raw_te
 		SENS = SENS - SENS2;
 		P = ((int64_t)raw_pres * SENS / 2097152 - OFF) / 32768;
 		
-		*pressure = (float)P;									// [Pa]
+		*pressure = (float)P + PRES_ERROR_VOLT;					// [Pa]
 		*temperature = (float)TEMP / 100.0;						// [°C]
 	}
 }

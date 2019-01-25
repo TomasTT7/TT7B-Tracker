@@ -19,6 +19,10 @@
 #include "stdint.h"
 
 
+#define PRES_ERROR_VOLT					190.0					// typical Pressure error vs supply voltage - for 1.8V
+#define TEMP_ERROR_VOLT					-0.38					// typical Temperature error vs supply voltage - for 1.8V
+
+
 // Functions
 void MS5607_cmd_Reset(uint8_t sensor, uint8_t delay_ms);
 void MS5607_cmd_Convert(uint8_t sensor, uint8_t mode);
