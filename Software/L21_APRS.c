@@ -129,6 +129,11 @@ uint8_t APRS_packet(uint8_t * buffer, uint8_t * callsign, uint8_t ssid, float la
 	temp_mcu = temp_mcu * 50.0 + 4000.0;
 	temp_ms1 = temp_ms1 * 50.0 + 4000.0;
 	temp_ms2 = temp_ms2 * 50.0 + 4000.0;
+	if(temp_mcu > 8280.0) temp_mcu = 8280.0;					// allowed range tops out at 85.6°C
+	if(temp_ms1 > 8280.0) temp_ms1 = 8280.0;					// allowed range tops out at 85.6°C
+	if(temp_ms2 > 8280.0) temp_ms2 = 8280.0;					// allowed range tops out at 85.6°C
+	if(pres_ms1 > 753570) pres_ms1 = 753570;					// allowed range tops out at 753,570Pa
+	if(pres_ms2 > 753570) pres_ms2 = 753570;					// allowed range tops out at 753,570Pa
 	
 	uint16_t amb_light = APRS_ambient_light(light);
 	
@@ -221,6 +226,11 @@ void APRS_backlog_encode(uint8_t * buffer, float lat, float lon, uint16_t alt, f
 	temp_mcu = temp_mcu * 50.0 + 4000.0;
 	temp_ms1 = temp_ms1 * 50.0 + 4000.0;
 	temp_ms2 = temp_ms2 * 50.0 + 4000.0;
+	if(temp_mcu > 8280.0) temp_mcu = 8280.0;					// allowed range tops out at 85.6°C
+	if(temp_ms1 > 8280.0) temp_ms1 = 8280.0;					// allowed range tops out at 85.6°C
+	if(temp_ms2 > 8280.0) temp_ms2 = 8280.0;					// allowed range tops out at 85.6°C
+	if(pres_ms1 > 753570) pres_ms1 = 753570;					// allowed range tops out at 753,570Pa
+	if(pres_ms2 > 753570) pres_ms2 = 753570;					// allowed range tops out at 753,570Pa
 	
 	uint16_t amb_light = APRS_ambient_light(light);
 	
@@ -573,13 +583,13 @@ uint8_t Base91_encode_u16(uint16_t number, uint8_t *buffer, uint8_t n)
 
 
 /*
-	Encodes values (max 753571) to Base91 format for APRS telemetry.
+	Encodes values (max 753570) to Base91 format for APRS telemetry.
 	
 	Output THREE chars.
 */
 uint8_t Base91_encode_u24(uint32_t number, uint8_t *buffer, uint8_t n)
 {
-	if(number > 753571)											// maximum acceptable value
+	if(number > 753570)											// maximum acceptable value
 	{
 		for(uint8_t i = 0; i < 3; i++) buffer[n++] = '!';		// decoded as 0
 	}
@@ -595,13 +605,13 @@ uint8_t Base91_encode_u24(uint32_t number, uint8_t *buffer, uint8_t n)
 
 
 /*
-	Encodes values (max 68574961) to Base91 format for APRS telemetry.
+	Encodes values (max 68574960) to Base91 format for APRS telemetry.
 	
 	Output FOUR chars.
 */
 uint8_t Base91_encode_u32(uint32_t number, uint8_t *buffer, uint8_t n)
 {
-	if(number > 68574961)										// maximum acceptable value
+	if(number > 68574960)										// maximum acceptable value
 	{
 		for(uint8_t i = 0; i < 4; i++) buffer[n++] = '!';		// decoded as 0
 	}
@@ -618,13 +628,13 @@ uint8_t Base91_encode_u32(uint32_t number, uint8_t *buffer, uint8_t n)
 
 
 /*
-	Encodes values (max 6240321451) to Base91 format for APRS telemetry.
+	Encodes values (max 6240321450) to Base91 format for APRS telemetry.
 	
 	Output FIVE chars.
 */
 uint8_t Base91_encode_u40(uint64_t number, uint8_t *buffer, uint8_t n)
 {
-	if(number > 6240321451)										// maximum acceptable value
+	if(number > 6240321450)										// maximum acceptable value
 	{
 		for(uint8_t i = 0; i < 5; i++) buffer[n++] = '!';		// decoded as 0
 	}
