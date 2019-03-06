@@ -9,7 +9,7 @@
 import math
 
 
-input_file = '2018-10-31.log'
+input_file = '2019-02-26_rst3.log'
 output_file = 'DireWolf_grab OK7DMT-1.txt'
 
 
@@ -53,19 +53,30 @@ for packet in packets:
     symbolcode = parts[9]
     latitude = parts[10]
     longitude = parts[11]
-    altitude =  parts[14]
-    comment = parts[21]
-
-    data1 = Base91_decode_4(comment[22:26])
+    
+    if not parts[14]:
+        altitude = 0
+    else:
+        altitude = parts[14]
+    
+    if parts[21][1] != '\"':
+        comment = parts[21][1:].replace('\""','\"')
+    else:
+        comment = parts[21][2:-1].replace('\""','\"')
+    
+    data1 = Base91_decode_4(comment[20:25])
     altitude_offset = int(data1 / 6 / 1000 / 17)
     altitude_precise = int(float(altitude)) + altitude_offset
     
     _latitude = (90.0 - float(latitude)) * 380926.0
     _longitude = (180.0 + float(longitude)) * 190463.0
-    _altitude = math.log(float(altitude_precise) * 3.28084, 10) / math.log(1.002, 10)
-
+    if altitude_precise > 0:
+        _altitude = math.log(float(altitude_precise) * 3.28084, 10) / math.log(1.002, 10)
+    else:
+        _altitude = 0
+    
     output = timestamp[0:10] + ' ' + timestamp[11:19] + ' UTC ' + source + ' ' + datatype + symbolcode[0] \
-             + Base91_encode_4(_latitude) + Base91_encode_4(_longitude) + symbolcode[1] + Base91_encode_2(_altitude) + 'W' + comment[2:-1]
+             + Base91_encode_4(_latitude) + Base91_encode_4(_longitude) + symbolcode[1] + Base91_encode_2(_altitude) + 'W' + comment
     out.append(output)
 
 fo = open(output_file, 'w')
