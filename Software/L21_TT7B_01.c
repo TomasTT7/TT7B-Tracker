@@ -64,7 +64,6 @@ int main(void)
 	/* XOSC32K */
 	GCLK_x_enable(0, 5, 1, 0, 0);									// 32.768kHz MCLK - XOSC32K
 	SysTick_CLK = 32768;
-	OSC_disable_OSC16M();											// disable default 4MHz internal oscillator
 	
 	/* Minimum Battery Voltage */
 	uint16_t batt_V_raw = 0;
@@ -81,12 +80,9 @@ int main(void)
 		WatchDog_reset();											// WatchDog Reset or let it reset every 16s
 	}
 	
-	/* FDPLL96M */
-	NVM_wait_states(3);												// NVM Read Wait States: 0-15, default 0, 3 for 48MHz PL2 operation
-	PM_set_performance_level(2, 0);
-	OSC_enable_FDPLL96M(0, 0, 1545, 14);							// 50,688,000Hz FDPLL96M
-	GCLK_x_enable(0, 8, 26, 0, 0);									// 1,949,538Hz MCLK - FDPLL96M / 26
-	SysTick_CLK = 1949538;
+	/* OSC16M */
+	GCLK_x_enable(0, 6, 0, 0, 0);									// 4MHz MCLK - OSC16M
+	SysTick_CLK = 4000000;
 	
 	/* Initialize Backlogging */
 	uint16_t backlog_index = 0;
@@ -101,7 +97,7 @@ int main(void)
 	PORT_switch_enable(2);											// POWER to SENSORS on
 	
 	/* MS5607 Calibrations and Measurements */
-	SERCOM_SPI_enable();											// 1MHz F_SPI (MCK / 2)
+	SERCOM_SPI_enable();											// 2MHz F_SPI (MCK / 2)
 	
 	MS5607_cmd_Reset(1, 0);											// after power-on, to make sure that calibration PROM gets loaded
 	MS5607_cmd_Reset(2, 0);											// after power-on, to make sure that calibration PROM gets loaded
@@ -129,7 +125,7 @@ int main(void)
 	SERCOM_SPI_disable();
 	
 	/* ADC Measurements */
-	ADC_enable(0, 5, 1, 6, 4, 0);									// 1MHz ADC clock, VDDANA reference, 64x averaging
+	ADC_enable(0, 5, 1, 6, 4, 0);									// 2MHz ADC clock, VDDANA reference, 64x averaging
 	batt_V_raw = ADC_sample_channel_x(0x07);						// battery voltage raw
 	uint16_t therm1_raw = ADC_sample_channel_x(0x12);				// thermistor 1 voltage
 	uint16_t therm2_raw = ADC_sample_channel_x(0x13);				// thermistor 2 voltage
@@ -141,7 +137,7 @@ int main(void)
 	/* Initialize VEML6030 */
 	PORT_switch_enable(3);											// POWER to 3.3V on
 	PORT_switch_enable(4);											// POWER to TRANSLATOR on
-	SERCOM_I2C_enable(1949538, 90000);								// 2MHz MCK, 90kHz I2C
+	SERCOM_I2C_enable(4000000, 90000);								// 4MHz MCK, 90kHz I2C
 	
 	VEML6030_disable();
 	SysTick_delay_ms(50);											// give 3.3V circuit short on time
@@ -180,7 +176,7 @@ int main(void)
 	uint8_t checksum	= 0;
 	
 	PORT_switch_enable(1);											// POWER to GPS on
-	SERCOM_USART_enable(1949538, 9600);								// initial baud rate 9600
+	SERCOM_USART_enable(4000000, 9600);								// initial baud rate 9600
 	
 	ZOE_M8B_send_message((uint8_t*) 0xFF, 1);						// wakes up receiver if it is in Inactive state, otherwise ignored
 	SysTick_delay_ms(500);											// if interval too short, receiver may not be ready to process configuration messages
@@ -189,7 +185,7 @@ int main(void)
 	SysTick_delay_ms(1500);											// must be >1s, because in case of baud mismatch u-blox disables UART for 1s
 	
 	SERCOM_USART_disable();
-	SERCOM_USART_enable(1949538, 115200);							// baud rate 115200
+	SERCOM_USART_enable(4000000, 115200);							// baud rate 115200
 	
 	clear_buffer(GPS_buffer, 110);
 	ack = ZOE_M8B_get_port(GPS_buffer, 230000);						// request confirmation of higher baud rate
@@ -200,7 +196,7 @@ int main(void)
 	{
 		baud_val = 9600;
 		SERCOM_USART_disable();
-		SERCOM_USART_enable(1949538, baud_val);						// baud rate 9600
+		SERCOM_USART_enable(4000000, baud_val);						// baud rate 9600
 	}
 	
 	/* WatchDog Reset */
@@ -218,7 +214,7 @@ int main(void)
 		WatchDog_reset();
 		
 		clear_buffer(GPS_buffer, 110);
-		checksum = ZOE_M8B_get_solution(GPS_buffer, 115000);		// 1.5s timeout with 2MHz MCLK
+		checksum = ZOE_M8B_get_solution(GPS_buffer, 230000);		// 1.5s timeout with 4MHz MCLK
 		
 		if(checksum == 1)
 		{
@@ -228,7 +224,7 @@ int main(void)
 			if((valid & 0x04) == 0x04 || (valid & 0x03) == 0x03) valid_time = 1;
 			else valid_time = 0;
 			
-			if(gnssFixOK && valid_time && numSV >= 6) break;		// valid fix, time and date and minimum number of satellites condition
+			if(gnssFixOK && valid_time && numSV >= 7) break;		// valid fix, time and date and minimum number of satellites condition
 		}
 		
 		RTC_current = RTC_get_current_count();		
@@ -249,7 +245,7 @@ int main(void)
 		
 		/* GPS - Wake Up */
 		PORT_switch_enable(1);										// POWER to GPS on
-		SERCOM_USART_enable(1949538, baud_val);						// operating baud rate (9600 or 115200)
+		SERCOM_USART_enable(4000000, baud_val);						// operating baud rate (9600 or 115200)
 		
 		ZOE_M8B_send_message((uint8_t*) 0xFF, 1);					// wakes up receiver if it is in Inactive state, otherwise ignored
 		SERCOM_USART_disable();
@@ -258,7 +254,7 @@ int main(void)
 		PORT_switch_enable(2);										// POWER to SENSORS on
 		
 		/* MS5607 */
-		SERCOM_SPI_enable();										// 1MHz F_SPI (MCK / 2)
+		SERCOM_SPI_enable();										// 2MHz F_SPI (MCK / 2)
 		MS5607_cmd_Reset(1, 0);										// after power-on, to make sure that calibration PROM gets loaded
 		MS5607_cmd_Reset(2, 0);										// after power-on, to make sure that calibration PROM gets loaded
 		SysTick_delay_ms(5);
@@ -282,7 +278,7 @@ int main(void)
 		SERCOM_SPI_disable();
 		
 		/* ADC Averaged */
-		ADC_enable(0, 5, 1, 6, 4, 0);								// 1MHz ADC clock, VDDANA reference, 64x averaging
+		ADC_enable(0, 5, 1, 6, 4, 0);								// 2MHz ADC clock, VDDANA reference, 64x averaging
 		batt_V_raw = ADC_sample_channel_x(0x07);					// battery voltage raw
 		therm1_raw = ADC_sample_channel_x(0x12);					// thermistor 1 voltage
 		therm2_raw = ADC_sample_channel_x(0x13);					// thermistor 2 voltage
@@ -303,10 +299,11 @@ int main(void)
 		uint32_t average_n = 64;									// number of samples to average
 		uint32_t raw_collected = 0;									// maximum 1,048,832 samples
 		
+		NVM_wait_states(3);											// NVM Read Wait States: 0-15, default 0, 3 for 48MHz PL2 operation
+		PM_set_performance_level(2, 0);
 		OSC_enable_DFLL48M_open();
 		GCLK_x_enable(0, 7, 15, 0, 0);								// 3.2MHz MCLK - DFLL48M / 15
 		SysTick_CLK = 3200000;
-		OSC_disable_FDPLL96M();
 		
 		SUPC_temperature_sensor(1);
 		ADC_enable(0, 0, 0, 0, 0, 63);								// 1.6MHz ADC clock, INTREF reference, 12-bit resolution
@@ -322,11 +319,12 @@ int main(void)
 		
 		float MCU_temp = ADC_temperature_mcu(temp_sensor_raw);		// [°C]
 		
-		/* FDPLL96M */
-		OSC_enable_FDPLL96M(0, 0, 1545, 14);						// 50,688,000Hz FDPLL96M
-		GCLK_x_enable(0, 8, 26, 0, 0);								// 1,949,538Hz MCLK - FDPLL96M / 26
-		SysTick_CLK = 1949538;
+		/* OSC16M */
+		GCLK_x_enable(0, 6, 0, 0, 0);								// 4MHz MCLK - OSC16M
+		SysTick_CLK = 4000000;
 		OSC_disable_DFLL48M();
+		PM_set_performance_level(0, 0);
+		NVM_wait_states(0);											// NVM Read Wait States: 0-15, default 0, 3 for 48MHz PL2 operation
 		
 		/* WatchDog Reset */
 		WatchDog_reset();
@@ -334,7 +332,7 @@ int main(void)
 		/* VEML6030 */
 		PORT_switch_enable(3);										// POWER to 3.3V on
 		PORT_switch_enable(4);										// POWER to TRANSLATOR on
-		SERCOM_I2C_enable(1949538, 90000);							// 2MHz MCK, 90kHz I2C
+		SERCOM_I2C_enable(4000000, 90000);							// 4MHz MCK, 90kHz I2C
 		
 		VEML6030_enable(0b10, 0b1100);								// Gain 1/8, Integration Time 25ms, maximum 120klux, resolution 1.8432lux
 		SysTick_delay_ms(55);										// for consistent readings (2x integration time + 5ms)
@@ -363,7 +361,7 @@ int main(void)
 		uint8_t tout = 15;
 		uint16_t attempts = 0;
 		
-		SERCOM_USART_enable(1949538, baud_val);						// operating baud rate (9600 or 115200)
+		SERCOM_USART_enable(4000000, baud_val);						// operating baud rate (9600 or 115200)
 		
 		while(1)													// delay until GPS module responds properly
 		{
@@ -397,7 +395,7 @@ int main(void)
 				attempts++;
 				
 				clear_buffer(GPS_buffer, 110);
-				checksum = ZOE_M8B_get_solution(GPS_buffer, 115000);		// 1.5s timeout with 2MHz MCLK
+				checksum = ZOE_M8B_get_solution(GPS_buffer, 230000);		// 1.5s timeout with 4MHz MCLK
 				
 				if(checksum == 1)
 				{
@@ -407,7 +405,7 @@ int main(void)
 					if((valid & 0x04) == 0x04 || (valid & 0x03) == 0x03) valid_time = 1;
 					else valid_time = 0;
 					
-					if(gnssFixOK && valid_time && numSV >= 6) break;		// valid fix, time and date and minimum number of satellites condition
+					if(gnssFixOK && valid_time && numSV >= 5) break;		// valid fix, time and date and minimum number of satellites condition
 				}
 				
 				if(attempts > 600)									// limit acquisition to 60s (600 attempts at 10Hz)
@@ -436,7 +434,7 @@ int main(void)
 		if(active_time > 999) active_time = 999;					// set upper limit - 99.9s
 		
 		/* Backlog */
-		if((count % 20) == 0 && !noGPS)								// store backlog every X minutes, but only with valid GPS data
+		if((count % 10) == 0 && !noGPS)								// store backlog every X cycles, but only with valid GPS data
 		{
 			uint8_t bck_buffer[37];
 			
@@ -463,12 +461,9 @@ int main(void)
 		/* APRS Transmission */
 		if(tx_frequency > 144000000 && tx_frequency < 146000000)	// no transmission if tx_frequency equals 0 
 		{
-			/* XOSC32K */
-			GCLK_x_enable(0, 5, 1, 0, 0);							// 32.768kHz MCLK - XOSC32K
-			SysTick_CLK = 32768;
-			OSC_disable_FDPLL96M();
-			
 			/* FDPLL96M */
+			NVM_wait_states(3);										// NVM Read Wait States: 0-15, default 0, 3 for 48MHz PL2 operation
+			PM_set_performance_level(2, 0);
 			OSC_enable_FDPLL96M(0, 0, 1545, 14);					// 50,688,000Hz FDPLL96M
 			GCLK_x_enable(0, 8, 2, 0, 0);							// 25,344,000Hz MCLK - FDPLL96M / 2
 			SysTick_CLK = 25344000;
@@ -496,31 +491,44 @@ int main(void)
 			SERCOM_I2C_disable();
 			PORT_switch_disable(4);									// POWER to TRANSLATOR off
 			PORT_switch_disable(3);									// POWER to 3.3V off
+			
+			/* XOSC32K */
+			GCLK_x_enable(0, 5, 1, 0, 0);							// 32.768kHz MCLK - XOSC32K
+			SysTick_CLK = 32768;
+			OSC_disable_FDPLL96M();
+			PM_set_performance_level(0, 0);
+			NVM_wait_states(0);										// NVM Read Wait States: 0-15, default 0, 3 for 48MHz PL2 operation
+		}
+		else
+		{
+			/* XOSC32K */
+			GCLK_x_enable(0, 5, 1, 0, 0);							// 32.768kHz MCLK - XOSC32K
+			SysTick_CLK = 32768;
 		}
 		
-		/* XOSC32K */
-		GCLK_x_enable(0, 5, 1, 0, 0);								// 32.768kHz MCLK - XOSC32K
-		SysTick_CLK = 32768;
-		OSC_disable_FDPLL96M();
-		PM_set_performance_level(0, 0);
-		NVM_wait_states(0);											// NVM Read Wait States: 0-15, default 0, 3 for 48MHz PL2 operation
+		/* WatchDog Reset */
+		WatchDog_reset();
 		
 		/* Sleep */
-		for(uint8_t i = 0; i < 6; i++)								// 60s = 6 * 10s
+		for(uint8_t i = 0; i < 24; i++)								// 120s = 24 * 5s
 		{
-			WatchDog_reset();										// WatchDog period 16s
-			RTC_mode0_update_compare(320);							// 10s sleep
+			RTC_mode0_update_compare(160);							// 5s sleep
 		
 			PM_set_sleepmode(4, 0, 0, 0, 0, 0);						// Standby, domains not linked, automatic mode, no sleepwalking, handled by HW
 			PM_sleep();												// enter Standby
+			
+			/* WatchDog Reset */
+			WatchDog_reset();										// WatchDog period 16s
+			
+			/* Avoid BOD */
+			PORT_switch_enable(1);									// POWER to GPS on
+			SysTick_delay_ms(1);
+			PORT_switch_disable(1);									// POWER to GPS off
 		}
 		
 		/* Wake Up */
-		NVM_wait_states(3);											// NVM Read Wait States: 0-15, default 0, 3 for 48MHz PL2 operation
-		PM_set_performance_level(2, 0);
-		OSC_enable_FDPLL96M(0, 0, 1545, 14);						// 50,688,000Hz FDPLL96M
-		GCLK_x_enable(0, 8, 26, 0, 0);								// 1,949,538Hz MCLK - FDPLL96M / 26
-		SysTick_CLK = 1949538;
+		GCLK_x_enable(0, 6, 0, 0, 0);								// 4MHz MCLK - OSC16M
+		SysTick_CLK = 4000000;
 		
 		RTC_mode0_set_count(0);										// reset RTC to count from 0 again
 	}

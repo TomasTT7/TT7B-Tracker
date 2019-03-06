@@ -78,3 +78,12 @@ void SysTick_delay_us(uint32_t us)
 		}
 	}
 }
+
+
+/*
+	Disables the timer.
+*/
+void SysTick_delay_disable(void)
+{
+	SysTick->CTRL = 0x00;
+}
