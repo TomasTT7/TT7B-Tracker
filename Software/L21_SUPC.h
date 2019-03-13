@@ -26,6 +26,9 @@
 
 // Functions
 void SUPC_temperature_sensor(uint8_t tsen);
+void SUPC_BOD33_enable(void);
+void SUPC_BOD33_disable(void);
+void SUPC_BOD33_set_level(uint8_t level);
 
 
 #endif // L21_SUPC_H_

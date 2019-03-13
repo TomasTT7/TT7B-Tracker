@@ -19,6 +19,7 @@
 // Functions
 uint8_t RSTC_get_reset_source(void);
 uint8_t RSTC_get_backup_exit_source(void);
+void RSTC_system_reset_request(void);
 
 
 #endif // L21_RSTC_H_

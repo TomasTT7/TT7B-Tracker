@@ -46,3 +46,41 @@ void SUPC_temperature_sensor(uint8_t tsen)
 	
 	SUPC->VREF.bit.TSEN = tsen & 0x01;						// enable/disable temperature sensor
 }
+
+
+/*
+	
+*/
+void SUPC_BOD33_enable(void)
+{
+	SUPC->BOD33.bit.ENABLE = 1;								// BOD33 is enabled.
+	while(!SUPC->STATUS.bit.B33SRDY);						// BOD33 synchronization is complete.
+}
+
+
+/*
+	
+*/
+void SUPC_BOD33_disable(void)
+{
+	SUPC->BOD33.bit.ENABLE = 0;								// BOD33 is disabled.
+	while(!SUPC->STATUS.bit.B33SRDY);						// BOD33 synchronization is complete.
+}
+
+
+/*
+	The BOD33 register is Enable-Protected, meaning that they can only be written when the BOD is
+	disabled (BOD33.ENABLE=0 and SYNCBUSY.BOD33EN=0).
+	
+	LEVEL	VBOD+	VBOD-
+	48		3.20V	3.08V
+	39		2.87V	2.77V
+	7		1.75V	1.673V
+	6		1.72V	1.65V
+*/
+void SUPC_BOD33_set_level(uint8_t level)
+{
+	if(level > 48) return;
+	
+	SUPC->BOD33.bit.LEVEL = level;							// These bits set the triggering voltage threshold for the BOD33.
+}
