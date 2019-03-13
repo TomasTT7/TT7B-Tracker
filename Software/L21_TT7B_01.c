@@ -54,6 +54,11 @@ int main(void)
 	uint8_t last_reset = RSTC_get_reset_source();
     SysTick_delay_init();
 	
+	/* Initialize BOD33 */
+	SUPC_BOD33_disable();
+	SUPC_BOD33_set_level(1);										// decrease trigger voltage to ~1.55V
+	SUPC_BOD33_enable();
+	
 	/* Initialize RTC */
 	uint32_t RTC_current = 0;
 	
@@ -174,6 +179,7 @@ int main(void)
 	
 	uint8_t ack			= 0;
 	uint8_t checksum	= 0;
+	uint8_t reinit		= 0;
 	
 	PORT_switch_enable(1);											// POWER to GPS on
 	SERCOM_USART_enable(4000000, 9600);								// initial baud rate 9600
@@ -411,6 +417,7 @@ int main(void)
 				if(attempts > 600)									// limit acquisition to 60s (600 attempts at 10Hz)
 				{
 					noGPS = 1;										// transmit packet without position
+					reinit++;
 					break;
 				}
 			}
@@ -420,7 +427,10 @@ int main(void)
 		else
 		{
 			noGPS = 1;												// transmit packet without position
+			reinit++;
 		}
+		
+		if(!noGPS) reinit = 0;										// zero counter of failed fix acquisitions in row
 		
 		SERCOM_USART_disable();
 		PORT_switch_disable(1);										// POWER to GPS off
@@ -510,25 +520,23 @@ int main(void)
 		WatchDog_reset();
 		
 		/* Sleep */
-		for(uint8_t i = 0; i < 24; i++)								// 120s = 24 * 5s
+		for(uint8_t i = 0; i < 12; i++)								// 120s = 12 * 10s
 		{
-			RTC_mode0_update_compare(160);							// 5s sleep
+			RTC_mode0_update_compare(320);							// 10s sleep
 		
 			PM_set_sleepmode(4, 0, 0, 0, 0, 0);						// Standby, domains not linked, automatic mode, no sleepwalking, handled by HW
 			PM_sleep();												// enter Standby
 			
 			/* WatchDog Reset */
 			WatchDog_reset();										// WatchDog period 16s
-			
-			/* Avoid BOD */
-			PORT_switch_enable(1);									// POWER to GPS on
-			SysTick_delay_ms(1);
-			PORT_switch_disable(1);									// POWER to GPS off
 		}
 		
-		/* Wake Up */
+		/* Wake-Up */
 		GCLK_x_enable(0, 6, 0, 0, 0);								// 4MHz MCLK - OSC16M
 		SysTick_CLK = 4000000;
+		
+		/* Force Reset Check */
+		if(reinit >= 5) RSTC_system_reset_request();				// reset MCU if too many positional fix failures in row
 		
 		RTC_mode0_set_count(0);										// reset RTC to count from 0 again
 	}
