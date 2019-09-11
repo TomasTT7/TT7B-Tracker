@@ -1,11 +1,3 @@
-# INPUT FORMAT:
-# 2018-10-31 23:11:49 CET: OK7DMT-1>APRS,WIDE2-1,qAO,OK9STS:!/5LD\S*,yON2WW^%O,)Z!Lx,fQ-D33ZM0!<Xf5N^JS%<z!(Z/'T$r7U@#]KRj1F(!9T,wQ7,8Z
-#
-# OUTPUT FORMAT:
-# 'yyyy-mm-dd HH:MM:SS timezone sender packet\n'
-# 2018-10-31 23:11:49 CET OK7DMT-1 !/5LD\S*,yON2WW^%O,)Z!Lx,fQ-D33ZM0!<Xf5N^JS%<z!(Z/'T$r7U@#]KRj1F(!9T,wQ7,8Z
-
-
 from lxml import html
 from HTMLParser import HTMLParser
 import requests
@@ -14,6 +6,8 @@ import re
 
 CALLSIGN = 'OK7DMT-1'               # '' returns packets from all callsigns
 LIMIT = '25'                        # 5, 25, 50, 100, 300, 500, 1000
+EMAIL = ''  						# aprs.fi requires login to show raw packets
+PASSWORD = ''
 
 
 """ Source: https://stackoverflow.com/a/12982689 """
@@ -23,13 +17,28 @@ def cleanhtml(raw_html):
     return cleantext
 
 
-url = 'https://aprs.fi/?c=raw&call=' + CALLSIGN + '&limit=' + LIMIT + '&view=normal'
+url_login = 'https://aprs.fi/?c=login'
+url_data = 'https://aprs.fi/?c=raw&call=' + CALLSIGN + '&limit=' + LIMIT + '&view=normal'
+
 
 htmlparser = HTMLParser()
 
-page = requests.get(url)
-tree = html.fromstring(page.content)
-packets = tree.xpath('//span[@class="raw_line"]')
+session_requests = requests.session()
+page = session_requests.get(url_login)
+
+tree = html.fromstring(page.text)
+csrf = list(set(tree.xpath("//input[@name='csrf_login']/@value")))[0]
+
+values = {'email': EMAIL,
+          'password': PASSWORD,
+          'csrf_login': csrf,
+          'do_login': 1}
+
+r = session_requests.post(url_login, data=values, headers = dict(referer=url_login))
+
+page_data = session_requests.get(url_data, headers = dict(referer = url_data))
+tree_data = html.fromstring(page_data.content)
+packets = tree_data.xpath('//span[@class="raw_line"] | //span[@class="raw_line_err"]')
 
 existing = []
 existing_raw = []
@@ -104,11 +113,3 @@ for line in output_raw:
 
 f.close
 fr.close
-
-
-
-
-
-
-
-
