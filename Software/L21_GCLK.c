@@ -117,7 +117,8 @@ void GCLK_x_enable(uint8_t gclk, uint8_t src, uint8_t div, uint8_t divsel, uint8
 */
 void GCLK_x_disable(uint8_t gclk)
 {
-	if(gclk < 9) GCLK->GENCTRL[gclk].bit.GENEN = 0;
+	if(gclk < 9) GCLK->GENCTRL[gclk].reg = 0;
+	while(GCLK->SYNCBUSY.reg & (0x01 << (gclk + 2)));
 }
 
 
