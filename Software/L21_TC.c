@@ -277,6 +277,20 @@ void TC0_Handler(void)
 
 
 /*
+	Waits for compare match. Then clears the flag and resets the counter.
+*/
+void TC0_compare_match_delay(void)
+{
+	while(!(TC0->COUNT16.INTFLAG.reg & (1 << 4)));				// wait for compare match
+	
+	TC0->COUNT16.INTFLAG.reg = TC_INTFLAG_MC0;					// clears corresponding Match or Capture Channel x interrupt flag
+	
+	TC0->COUNT16.COUNT.reg = 0;									// These bits contain the current counter value.
+	while(TC0->COUNT16.SYNCBUSY.bit.COUNT);						// bit is cleared when synchronization of COUNT between clock domains is complete
+}
+
+
+/*
 	Set up as an 16-bit timer in compare operation.
 	
 	PRESCALER
