@@ -164,7 +164,7 @@ void SI5351B_deinit(void)
 		
 	VCXO
 		For a desired pull-range of +/– 30ppm, the value APR in the equation below is 30,
-		for +/– 60ppm APR¨is 60, and so on.
+		for +/– 60ppm APR is 60, and so on.
 		
 		VCXO_Param[21:0] = 1.03 * (128 * a + b / 10^6) * APR
 		
@@ -208,6 +208,69 @@ void SI5351B_frequency(uint32_t freq_Hz, uint8_t APR)
 	
 	/* MULTISYNTH 5 FREQUENCY */
 	a = 6;
+	b = 0;
+	c = 1;
+	
+	p1 = 128 * a + floor(128 * b / c) - 512;
+	p2 = 128 * b - c * floor(128 * b / c);
+	
+	SI5351B_write_reg(82, (c & 0x0000FF00) >> 8);				// MS5_P3[15:8]
+	SI5351B_write_reg(83, (c & 0x000000FF));					// MS5_P3[7:0]
+	SI5351B_write_reg(84, (p1 & 0x00030000) >> 16);				// R5_DIV[2:0], MS5_DIVBY4[1:0], MS5_P1[17:16]
+	SI5351B_write_reg(85, (p1 & 0x0000FF00) >> 8);				// MS5_P1[15:8]
+	SI5351B_write_reg(86, (p1 & 0x000000FF));					// MS5_P1[7:0]
+	SI5351B_write_reg(87, ((c & 0x000F0000) >> 12) | ((p2 & 0x000F0000) >> 16));	// MS5_P3[19:16], MS5_P2[19:16]
+	SI5351B_write_reg(88, (p2 & 0x0000FF00) >> 8);				// MS5_P2[15:8]
+	SI5351B_write_reg(89, (p2 & 0x000000FF));					// MS5_P2[7:0]
+}
+
+
+/*
+	Frequencies
+		Band		Dial frequency (MHz)		TX frequency (MHz)
+		40m			7.038600					7.040000 - 7.040200
+		30m			10.138700					10.140100 - 10.140300
+		20m			14.095600					14.097000 - 14.097200
+	
+	Default frequency: 14.097100 MHz
+*/
+void SI5351B_frequency_WSPR(uint32_t freq_Hz, uint8_t APR)
+{
+	/* PLLB VCO FREQUENCY */
+	uint8_t factor = 0;
+	
+	if(freq_Hz >= 6000000 && freq_Hz < 8600000) factor = 100;		// VCO frequency: 600-860MHz
+	else if(freq_Hz >= 8600000 && freq_Hz < 12100000) factor = 70;	// VCO frequency: 602-847MHz
+	else if(freq_Hz >= 12100000 && freq_Hz < 16500000) factor = 50;	// VCO frequency: 605-825MHz
+	else{freq_Hz = 14097100; factor = 50;}							// default
+	
+	uint32_t VCOfreq = (freq_Hz + FREQ_OFFSET_WSPR) * factor;
+	
+	uint32_t a = VCOfreq / TCXO_FREQ;
+	uint32_t b = (uint64_t)(VCOfreq % TCXO_FREQ) * 1000000 / (uint64_t)TCXO_FREQ;
+	uint32_t c = 1000000;
+	
+	uint32_t p1 = 128 * a + floor(128 * b / c) - 512;
+	uint32_t p2 = 128 * b - c * floor(128 * b / c);
+	
+	SI5351B_write_reg(34, (c & 0x0000FF00) >> 8);				// MSNB_P3[15:8]
+	SI5351B_write_reg(35, (c & 0x000000FF));					// MSNB_P3[7:0]
+	SI5351B_write_reg(36, (p1 & 0x00030000) >> 16);				// MSNB_P1[17:16]
+	SI5351B_write_reg(37, (p1 & 0x0000FF00) >> 8);				// MSNB_P1[15:8]
+	SI5351B_write_reg(38, (p1 & 0x000000FF));					// MSNB_P1[7:0]
+	SI5351B_write_reg(39, ((c & 0x000F0000) >> 12) | ((p2 & 0x000F0000) >> 16));	// MSNB_P3[19:16], MSNB_P2[19:16]
+	SI5351B_write_reg(40, (p2 & 0x0000FF00) >> 8);				// MSNB_P2[15:8]
+	SI5351B_write_reg(41, (p2 & 0x000000FF));					// MSNB_P2[7:0]
+	
+	/* VCXO */
+	uint32_t VCXO_Param = (uint32_t)(1.03 * (128.0 * (float)a + (float)b / 1000000.0) * (float)APR);
+	
+	SI5351B_write_reg(162, VCXO_Param & 0xFF);					// VCXO_Param[7:0]
+	SI5351B_write_reg(163, (VCXO_Param >> 8) & 0xFF);			// VCXO_Param[15:8]
+	SI5351B_write_reg(164, (VCXO_Param >> 16) & 0x3F);			// VCXO_Param[21:16]
+	
+	/* MULTISYNTH 5 FREQUENCY */
+	a = factor;
 	b = 0;
 	c = 1;
 	
