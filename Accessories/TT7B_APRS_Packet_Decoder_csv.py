@@ -8,12 +8,12 @@
 
 from datetime import datetime, timedelta
 import math
+import re
 
 
-input_file = 'APRSfi_grab OK7DMT-1.txt'
-#input_file = 'DireWolf_grab OK7DMT-1.txt'
-#input_file = 'kiss.log'
-utc_offset = 1
+input_file = 'APRSfi_grab OK7DMT-2.txt'
+utc_offset = 2
+tracker_V = 1.826
 
 
 def Base91_2(string):
@@ -60,8 +60,12 @@ packets = rawinput.split('\n')
 packets.pop(-1)
 
 for packet in packets:
-    parts = packet.split(' ', 4)
-
+    parts = packet.split(' ', 5)
+    #print(len(parts[4]), parts[4])
+    if len(parts[4]) != 38 and len(parts[4]) != 44 and len(parts[4]) != 75 and len(parts[4]) != 81:
+        print(len(parts[4]), packet)
+        continue
+    
     if parts[4][0] is '!' and parts[4][1] is '0':       # packet without position
         position = parts[4][0:20]
         telemetry = parts[4][20:44]
@@ -119,16 +123,16 @@ for packet in packets:
     
     tTH1 = Base91_2(telemetry[2:4])
     if tTH1 > 0 and tTH1 < 4095:
-        tTH1 = 1 / (0.00128424 + 0.00023629 * math.log((tTH1 / 4095.0 * 1.826) * 49900.0 / (1.826 - (tTH1 / 4095.0 * 1.826))) \
-             + 0.0000000928 * math.log((tTH1 / 4095.0 * 1.826) * 49900.0 / (1.826 - (tTH1 / 4095.0 * 1.826)))**3) - 273.15
+        tTH1 = 1 / (0.00128424 + 0.00023629 * math.log((tTH1 / 4095.0 * tracker_V) * 49900.0 / (tracker_V - (tTH1 / 4095.0 * tracker_V))) \
+             + 0.0000000928 * math.log((tTH1 / 4095.0 * tracker_V) * 49900.0 / (tracker_V - (tTH1 / 4095.0 * tracker_V)))**3) - 273.15
     else:
         tTH1 = 0
     tempTH1.append(tTH1)
     
     tTH2 = Base91_2(telemetry[4:6])
     if tTH2 > 0 and tTH2 < 4095:
-        tTH2 = 1 / (0.00128424 + 0.00023629 * math.log((tTH2 / 4095.0 * 1.826) * 49900.0 / (1.826 - (tTH2 / 4095.0 * 1.826))) \
-             + 0.0000000928 * math.log((tTH2 / 4095.0 * 1.826) * 49900.0 / (1.826 - (tTH2 / 4095.0 * 1.826)))**3) - 273.15
+        tTH2 = 1 / (0.00128424 + 0.00023629 * math.log((tTH2 / 4095.0 * tracker_V) * 49900.0 / (tracker_V - (tTH2 / 4095.0 * tracker_V))) \
+             + 0.0000000928 * math.log((tTH2 / 4095.0 * tracker_V) * 49900.0 / (tracker_V - (tTH2 / 4095.0 * tracker_V)))**3) - 273.15
     else:
         tTH2 = 0
     tempTH2.append(tTH2)
@@ -146,7 +150,7 @@ for packet in packets:
     presMS2.append(Base91_3(telemetry[13:16]))
 
     bV = Base91_2(telemetry[16:18])
-    bV = bV / 4095.0 * 1.826 / 0.5
+    bV = bV / 4095.0 * tracker_V / 0.5
     battV.append(bV)
 
     lit = Base91_2(telemetry[18:20])
@@ -190,16 +194,16 @@ for packet in packets:
 
         tTH1B = Base91_2(backlog[19:21])
         if tTH1B > 0 and tTH1B < 4096:
-            tTH1B = 1 / (0.00128424 + 0.00023629 * math.log((tTH1B / 4095.0 * 1.826) * 49900.0 / (1.826 - (tTH1B / 4095.0 * 1.826))) \
-                  + 0.0000000928 * math.log((tTH1B / 4095.0 * 1.826) * 49900.0 / (1.826 - (tTH1B / 4095.0 * 1.826)))**3) - 273.15
+            tTH1B = 1 / (0.00128424 + 0.00023629 * math.log((tTH1B / 4095.0 * tracker_V) * 49900.0 / (tracker_V - (tTH1B / 4095.0 * tracker_V))) \
+                  + 0.0000000928 * math.log((tTH1B / 4095.0 * tracker_V) * 49900.0 / (tracker_V - (tTH1B / 4095.0 * tracker_V)))**3) - 273.15
         else:
             tTH1B = 0
         tempTH1B.append(tTH1B)
 
         tTH2B = Base91_2(backlog[21:23])
         if tTH2B > 0 and tTH2B < 4096:
-            tTH2B = 1 / (0.00128424 + 0.00023629 * math.log((tTH2B / 4095.0 * 1.826) * 49900.0 / (1.826 - (tTH2B / 4095.0 * 1.826))) \
-                  + 0.0000000928 * math.log((tTH2B / 4095.0 * 1.826) * 49900.0 / (1.826 - (tTH2B / 4095.0 * 1.826)))**3) - 273.15
+            tTH2B = 1 / (0.00128424 + 0.00023629 * math.log((tTH2B / 4095.0 * tracker_V) * 49900.0 / (tracker_V - (tTH2B / 4095.0 * tracker_V))) \
+                  + 0.0000000928 * math.log((tTH2B / 4095.0 * tracker_V) * 49900.0 / (tracker_V - (tTH2B / 4095.0 * tracker_V)))**3) - 273.15
         else:
             tTH2B = 0
         tempTH2B.append(tTH2B)
@@ -217,7 +221,7 @@ for packet in packets:
         presMS2B.append(Base91_3(backlog[30:33]))
 
         bVB = Base91_2(backlog[33:35])
-        bVB = bVB / 4095.0 * 1.826 / 0.5
+        bVB = bVB / 4095.0 * tracker_V / 0.5
         battVB.append(bVB)
 
         litB = Base91_2(backlog[35:37])
@@ -227,7 +231,7 @@ for packet in packets:
 # CSV
 header = """Timestamp,Callsign,Latitude,Longitude,Altitude (coarse),Altitude (precise),Altitude (offset),Temperature MCU,Temperature TH1,Temperature TH2,Temperature MS1,Temperature MS2,Pressure MS1,Pressure MS2,Battery Voltage,Ambient Light,Satellites,Active Time,Last Reset,Source"""
 
-units = """[UTC],,[\B0],[\B0],[m],[m],[m],[\B0C],[\B0C],[\B0C],[\B0C],[\B0C],[Pa],[Pa],[V],[lux],[n],[s],,[L/B]"""
+units = """[UTC],,[°],[°],[m],[m],[m],[°C],[°C],[°C],[°C],[°C],[Pa],[Pa],[V],[lux],[n],[s],,[L/B]"""
 
 output = []
 

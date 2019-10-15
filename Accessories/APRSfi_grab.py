@@ -4,9 +4,9 @@ import requests
 import re
 
 
-CALLSIGN = 'OK7DMT-1'               # '' returns packets from all callsigns
-LIMIT = '25'                        # 5, 25, 50, 100, 300, 500, 1000
-EMAIL = ''  						# aprs.fi requires login to show raw packets
+CALLSIGN = 'OK7DMT-2'			# '' returns packets from all callsigns
+LIMIT = '25'				# 5, 25, 50, 100, 300, 500, 1000
+EMAIL = ''				# aprs.fi requires login to show raw packets
 PASSWORD = ''
 
 
