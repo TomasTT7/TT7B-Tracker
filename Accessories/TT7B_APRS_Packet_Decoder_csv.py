@@ -59,9 +59,23 @@ f.close
 packets = rawinput.split('\n')
 packets.pop(-1)
 
-for packet in packets:
+# filter repeated packets
+packets_seen = set()
+output = []
+
+for i in packets:
+    _i = i.split(' ', 5)
+    
+    if _i[4] not in packets_seen:
+        output.append(i)
+        packets_seen.add(_i[4])
+    else:
+        print(i)
+
+# decode packets
+for packet in output:
     parts = packet.split(' ', 5)
-    #print(len(parts[4]), parts[4])
+    
     if len(parts[4]) != 38 and len(parts[4]) != 44 and len(parts[4]) != 75 and len(parts[4]) != 81:
         print(len(parts[4]), packet)
         continue
@@ -85,7 +99,12 @@ for packet in packets:
     d = datetime.strptime(parts[0] + ' ' + parts[1], '%Y-%m-%d %H:%M:%S')
     
     if parts[2] != 'UTC':
-        d = d - timedelta(hours=utc_offset)
+        if parts[2] == 'CET':
+            d = d - timedelta(hours=1)
+        elif parts[2] == 'CEST':
+            d = d - timedelta(hours=2)
+        else:
+            d = d - timedelta(hours=utc_offset)
     
     year.append(d.year)
     month.append(d.month)
@@ -174,7 +193,7 @@ for packet in packets:
         lonB = Base91_4(backlog[4:8])
         lonB = lonB / 190463.0 - 180.0
         longitudeB.append(lonB)
-
+        
         data2 = Base91_4(backlog[8:12])
         altitude_preciseB.append(int(data2 / 6 / 17))
         satellitesB.append(int(data2 / 6 % 17))
@@ -229,9 +248,9 @@ for packet in packets:
         lightB.append(litB)
 
 # CSV
-header = """Timestamp,Callsign,Latitude,Longitude,Altitude (coarse),Altitude (precise),Altitude (offset),Temperature MCU,Temperature TH1,Temperature TH2,Temperature MS1,Temperature MS2,Pressure MS1,Pressure MS2,Battery Voltage,Ambient Light,Satellites,Active Time,Last Reset,Source"""
+header = """Timestamp,Callsign,Latitude,Longitude,Altitude (coarse),Altitude (precise),Altitude (offset),Temperature MCU,Temperature TH1,Temperature TH2,Temperature MS1,Temperature MS2,Pressure MS1,Pressure MS2,Battery Voltage,Ambient Light,Satellites,Active Time,Last Reset,Source,Repeat"""
 
-units = """[UTC],,[°],[°],[m],[m],[m],[°C],[°C],[°C],[°C],[°C],[Pa],[Pa],[V],[lux],[n],[s],,[L/B]"""
+units = """[UTC],,[°],[°],[m],[m],[m],[°C],[°C],[°C],[°C],[°C],[Pa],[Pa],[V],[lux],[n],[s],,[L/B],[0/1]"""
 
 output = []
 
@@ -257,13 +276,29 @@ for pkt in output:
         final.append(pkt)
         output_seen.add(pkt)
 
-final.sort()
+# mark backlogs of existing realtime data
+final2 = []
+final_seen = set()
 
+for f in final:
+    _f = f.split(',')
+
+    _f_search = _f[2] + ',' + _f[3] + ',' + _f[5] + ',' + _f[7] + ',' + _f[8] + ',' + _f[9] + ',' + _f[10] + ',' + _f[11] + ',' + _f[12] + ',' + _f[13] + ',' + _f[14] + ',' + _f[15] + ',' + _f[16] + ',' + _f[17]
+
+    if _f_search not in final_seen:
+        final2.append(f + ',0')
+        final_seen.add(_f_search)
+    else:
+        final2.append(f + ',1')
+
+final2.sort()
+
+# save output to a file
 fo = open(callsign[0] + ' data.csv', 'w')
 fo.write(header + '\n')
 fo.write(units + '\n')
 
-for pkt in final:
+for pkt in final2:
     fo.write(pkt + '\n')
     print(pkt)
 
